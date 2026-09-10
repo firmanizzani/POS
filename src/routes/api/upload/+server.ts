@@ -24,7 +24,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
     const filename = `products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const blob = await put(filename, file, {
-      access: "public"
+      access: "file"
     });
 
     return json({ success: true, url: blob.url });
