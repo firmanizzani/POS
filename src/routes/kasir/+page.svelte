@@ -58,9 +58,11 @@
     imageUrl?: string;
   }
 
-  // Full Minimarket Database
-  const products: ProductItem[] = [
-    // Mie & Makanan Instan
+  import { api } from '$lib/api/eden';
+
+  // Full Minimarket Database (Default + Fetched from Neon API)
+  let products: ProductItem[] = [
+    // Mie & Makanan Instan (cat-1)
     { id: 'prod-101', barcode: '8991000000101', name: 'Indomie Goreng Spesial 85g', category: 'Mie & Makanan Instan', sellPrice: 3500, stock: 200, image: '🍜' },
     { id: 'prod-102', barcode: '8991000000102', name: 'Indomie Kuah Rasa Ayam Bawang 75g', category: 'Mie & Makanan Instan', sellPrice: 3400, stock: 150, image: '🍜' },
     { id: 'prod-103', barcode: '8991000000103', name: 'Indomie Kuah Rasa Soto Mie 70g', category: 'Mie & Makanan Instan', sellPrice: 3400, stock: 150, image: '🍜' },
@@ -68,40 +70,88 @@
     { id: 'prod-105', barcode: '8991000000105', name: 'Pop Mie Rasa Ayam 75g', category: 'Mie & Makanan Instan', sellPrice: 5500, stock: 60, image: '🍜' },
     { id: 'prod-106', barcode: '8991000000106', name: 'Samyang Buldak Carbonara 130g', category: 'Mie & Makanan Instan', sellPrice: 22500, stock: 30, image: '🍜' },
 
-    // Biskuit & Roti
+    // Biskuit & Roti (cat-2)
     { id: 'prod-107', barcode: '8991000000107', name: 'Oreo Vanilla 133g', category: 'Biskuit & Roti', sellPrice: 9500, stock: 50, image: '🍪' },
     { id: 'prod-108', barcode: '8991000000108', name: 'Roma Kelapa 300g', category: 'Biskuit & Roti', sellPrice: 11500, stock: 40, image: '🍞' },
     { id: 'prod-109', barcode: '8991000000109', name: 'Khong Guan Red Assorted Biscuit 300g', category: 'Biskuit & Roti', sellPrice: 49000, stock: 15, image: '🍪' },
     { id: 'prod-110', barcode: '8991000000110', name: 'Tango Wafer Cokelat 130g', category: 'Biskuit & Roti', sellPrice: 8000, stock: 45, image: '🍫' },
+    { id: 'prod-111', barcode: '8991000000111', name: 'Good Time Double Choc 72g', category: 'Biskuit & Roti', sellPrice: 7500, stock: 40, image: '🍪' },
 
-    // Camilan & Snack
+    // Camilan & Snack (cat-3)
     { id: 'prod-112', barcode: '8991000000112', name: 'Chitato Sapi Panggang 68g', category: 'Camilan & Snack', sellPrice: 11500, stock: 50, image: '🥔' },
     { id: 'prod-113', barcode: '8991000000113', name: 'Chitato Lite Rumput Laut 68g', category: 'Camilan & Snack', sellPrice: 11500, stock: 40, image: '🥔' },
     { id: 'prod-114', barcode: '8991000000114', name: 'Silverqueen Milk Chocolate 58g', category: 'Camilan & Snack', sellPrice: 16000, stock: 35, image: '🍫' },
     { id: 'prod-115', barcode: '8991000000115', name: 'Kusuka Keripik Singkong Balado 180g', category: 'Camilan & Snack', sellPrice: 14000, stock: 30, image: '🥔' },
+    { id: 'prod-116', barcode: '8991000000116', name: 'Beng-Beng Wafer Caramel 20g Pack', category: 'Camilan & Snack', sellPrice: 40000, stock: 20, image: '🍫' },
 
-    // Air Mineral & Isotonik
+    // Air Mineral & Isotonik (cat-4)
     { id: 'prod-117', barcode: '8991000000117', name: 'Le Minerale 600ml', category: 'Air Mineral & Isotonik', sellPrice: 3500, stock: 120, image: '💧' },
     { id: 'prod-118', barcode: '8991000000118', name: 'Aqua Air Mineral 600ml', category: 'Air Mineral & Isotonik', sellPrice: 3800, stock: 120, image: '💧' },
     { id: 'prod-119', barcode: '8991000000119', name: 'Aqua Air Mineral 1500ml', category: 'Air Mineral & Isotonik', sellPrice: 7000, stock: 60, image: '💧' },
     { id: 'prod-120', barcode: '8991000000120', name: 'Pocari Sweat 500ml', category: 'Air Mineral & Isotonik', sellPrice: 8500, stock: 48, image: '⚡' },
+    { id: 'prod-121', barcode: '8991000000121', name: 'Mizone Apple Guava 500ml', category: 'Air Mineral & Isotonik', sellPrice: 5000, stock: 36, image: '⚡' },
 
-    // Minuman Kemasan & Susu
+    // Minuman Kemasan & Susu (cat-5)
     { id: 'prod-122', barcode: '8991000000122', name: 'Teh Botol Sosro 450ml', category: 'Minuman Kemasan & Susu', sellPrice: 5500, stock: 80, image: '🧃' },
     { id: 'prod-123', barcode: '8991000000123', name: 'Ultra Milk Cokelat 250ml', category: 'Minuman Kemasan & Susu', sellPrice: 7000, stock: 60, image: '🥛' },
     { id: 'prod-124', barcode: '8991000000124', name: 'Ultra Milk Full Cream 1000ml', category: 'Minuman Kemasan & Susu', sellPrice: 20000, stock: 24, image: '🥛' },
     { id: 'prod-125', barcode: '8991000000125', name: 'Nescafé Original Can 220ml', category: 'Minuman Kemasan & Susu', sellPrice: 8500, stock: 48, image: '☕' },
+    { id: 'prod-126', barcode: '8991000000126', name: 'Cimory Yogurt Drink Blueberry 240ml', category: 'Minuman Kemasan & Susu', sellPrice: 9500, stock: 30, image: '🥛' },
+    { id: 'prod-127', barcode: '8991000000127', name: 'Coca-Cola 390ml', category: 'Minuman Kemasan & Susu', sellPrice: 5500, stock: 60, image: '🥤' },
 
-    // Bumbu & Kebutuhan Dapur
+    // Bumbu & Kebutuhan Dapur (cat-6)
     { id: 'prod-128', barcode: '8991000000128', name: 'Minyak Goreng Bimoli 1L', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 19500, stock: 30, image: '🍾' },
     { id: 'prod-129', barcode: '8991000000129', name: 'Minyak Goreng Sania 2L', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 37000, stock: 20, image: '🍾' },
     { id: 'prod-130', barcode: '8991000000130', name: 'Gula Pasir Gulaku Premium 1kg', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 17500, stock: 40, image: '🍚' },
+    { id: 'prod-131', barcode: '8991000000131', name: 'Garam Dapur Cap Kapal 250g', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 3000, stock: 50, image: '🧂' },
+    { id: 'prod-132', barcode: '8991000000132', name: 'Royco Rasa Ayam 230g', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 10000, stock: 35, image: '🍲' },
+    { id: 'prod-133', barcode: '8991000000133', name: 'ABC Kecap Manis Refill 520ml', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 19500, stock: 25, image: '🍾' },
+    { id: 'prod-134', barcode: '8991000000134', name: 'Sasa Tepung Bumbu Serbaguna 200g', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 6500, stock: 40, image: '🌾' },
 
-    // Sabun & Kebersihan
+    // Sabun & Perawatan Tubuh (cat-7)
     { id: 'prod-135', barcode: '8991000000135', name: 'Lifebuoy Sabun Mandi Red 110g', category: 'Sabun & Perawatan Tubuh', sellPrice: 5000, stock: 50, image: '🧼' },
+    { id: 'prod-136', barcode: '8991000000136', name: 'Biore Body Wash Pouch 450ml', category: 'Sabun & Perawatan Tubuh', sellPrice: 26000, stock: 20, image: '🧴' },
+    { id: 'prod-137', barcode: '8991000000137', name: 'Pantene Shampoo Anti Dandruff 160ml', category: 'Sabun & Perawatan Tubuh', sellPrice: 27500, stock: 20, image: '🧴' },
+    { id: 'prod-138', barcode: '8991000000138', name: 'Pepsodent Complete 124 190g', category: 'Sabun & Perawatan Tubuh', sellPrice: 13500, stock: 30, image: '🪥' },
+    { id: 'prod-139', barcode: '8991000000139', name: 'Formula Sikat Gigi Double Action', category: 'Sabun & Perawatan Tubuh', sellPrice: 6000, stock: 40, image: '🪥' },
+    { id: 'prod-140', barcode: '8991000000140', name: 'Rexona Roll On Women Passion 45ml', category: 'Sabun & Perawatan Tubuh', sellPrice: 21500, stock: 15, image: '✨' },
+
+    // Kebutuhan Kebersihan Rumah (cat-8)
     { id: 'prod-141', barcode: '8991000000141', name: 'Rinso Anti Noda Deterjen Powder 770g', category: 'Kebutuhan Kebersihan Rumah', sellPrice: 24000, stock: 25, image: '🧺' },
-    { id: 'prod-142', barcode: '8991000000142', name: 'Mama Lemon Pencuci Piring Pouch 680ml', category: 'Kebutuhan Kebersihan Rumah', sellPrice: 11500, stock: 30, image: '🍋' }
+    { id: 'prod-142', barcode: '8991000000142', name: 'Mama Lemon Pencuci Piring Pouch 680ml', category: 'Kebutuhan Kebersihan Rumah', sellPrice: 11500, stock: 30, image: '🍋' },
+    { id: 'prod-143', barcode: '8991000000143', name: 'So Klin Pembersih Lantai Citrus 780ml', category: 'Kebutuhan Kebersihan Rumah', sellPrice: 13000, stock: 25, image: '🧹' },
+    { id: 'prod-144', barcode: '8991000000144', name: 'Baygon Aerosol Tea Blossom 600ml', category: 'Kebutuhan Kebersihan Rumah', sellPrice: 41000, stock: 15, image: '🦟' },
+
+    // Kebutuhan Ibu & Bayi (cat-9)
+    { id: 'prod-145', barcode: '8991000000145', name: 'MamyPoko Pants Standard M34', category: 'Kebutuhan Ibu & Bayi', sellPrice: 62000, stock: 15, image: '👶' },
+    { id: 'prod-146', barcode: '8991000000146', name: 'My Baby Minyak Telon Plus 90ml', category: 'Kebutuhan Ibu & Bayi', sellPrice: 23500, stock: 20, image: '🍼' },
+    { id: 'prod-147', barcode: '8991000000147', name: 'Cussons Baby Wipes Sensitive 50s', category: 'Kebutuhan Ibu & Bayi', sellPrice: 16500, stock: 25, image: '🧻' },
+
+    // Perlengkapan Rumah Tangga (cat-10)
+    { id: 'prod-148', barcode: '8991000000148', name: 'Tissue Paseo Soft Pack 250s', category: 'Perlengkapan Rumah Tangga', sellPrice: 14000, stock: 40, image: '🧻' },
+    { id: 'prod-149', barcode: '8991000000149', name: 'Baterai ABC Alkaline AA Pack/2', category: 'Perlengkapan Rumah Tangga', sellPrice: 14500, stock: 30, image: '🔋' },
+    { id: 'prod-150', barcode: '8991000000150', name: 'Korek Api Gas Tokai', category: 'Perlengkapan Rumah Tangga', sellPrice: 4000, stock: 100, image: '🔥' }
   ];
+
+  onMount(async () => {
+    try {
+      const res: any = await api.products.get();
+      if (res?.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        products = res.data.data.map((p: any) => ({
+          id: p.id,
+          barcode: p.barcode,
+          name: p.name,
+          category: p.categoryName || 'Lainnya',
+          sellPrice: Number(p.sellPrice),
+          stock: Number(p.stock),
+          image: '🛒',
+          imageUrl: p.imageUrl
+        }));
+      }
+    } catch (e) {
+      console.warn('Using default product list', e);
+    }
+  });
 
   const categories = [
     'All',

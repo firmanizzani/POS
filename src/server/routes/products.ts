@@ -1,82 +1,71 @@
 import { Elysia, t } from 'elysia';
+import { db } from '../db/index.js';
+import { products, categories } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 
 export const productRoutes = new Elysia({ prefix: '/products' })
-  .get('/', ({ query }) => {
-    // Return sample/mock product data or query DB
-    return {
-      success: true,
-      data: [
-        {
-          id: 'prod-1',
-          barcode: '899100110011',
-          sku: 'IND-MIE-GORENG',
-          name: 'Indomie Goreng Original 85g',
-          categoryId: 'cat-1',
-          categoryName: 'Makanan',
-          costPrice: 2800,
-          sellPrice: 3200,
-          stock: 120,
-          unit: 'pcs',
-          imageUrl: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?w=300',
-          isActive: true
-        },
-        {
-          id: 'prod-2',
-          barcode: '899200220022',
-          sku: 'AQUA-600ML',
-          name: 'Air Mineral Aqua 600ml',
-          categoryId: 'cat-2',
-          categoryName: 'Minuman',
-          costPrice: 2500,
-          sellPrice: 3500,
-          stock: 85,
-          unit: 'botol',
-          imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=300',
-          isActive: true
-        },
-        {
-          id: 'prod-3',
-          barcode: '899300330033',
-          sku: 'MILO-3IN1',
-          name: 'Milo Powder 3in1 20g',
-          categoryId: 'cat-2',
-          categoryName: 'Minuman',
-          costPrice: 2200,
-          sellPrice: 3000,
-          stock: 45,
-          unit: 'sachet',
-          imageUrl: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=300',
-          isActive: true
-        },
-        {
-          id: 'prod-4',
-          barcode: '899400440044',
-          sku: 'CHITATO-68G',
-          name: 'Chitato Sapi Panggang 68g',
-          categoryId: 'cat-3',
-          categoryName: 'Snack',
-          costPrice: 8500,
-          sellPrice: 11000,
-          stock: 30,
-          unit: 'pcs',
-          imageUrl: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=300',
-          isActive: true
-        }
-      ]
-    };
+  .get('/', async () => {
+    try {
+      const allProducts = await db.select({
+        id: products.id,
+        barcode: products.barcode,
+        sku: products.sku,
+        name: products.name,
+        categoryId: products.categoryId,
+        categoryName: categories.name,
+        costPrice: products.costPrice,
+        sellPrice: products.sellPrice,
+        stock: products.stock,
+        unit: products.unit,
+        imageUrl: products.imageUrl,
+        minStockAlert: products.minStockAlert,
+        isActive: products.isActive
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id));
+
+      return {
+        success: true,
+        data: allProducts.map(p => ({
+          ...p,
+          costPrice: Number(p.costPrice),
+          sellPrice: Number(p.sellPrice)
+        }))
+      };
+    } catch (error: any) {
+      return { success: false, message: error.message, data: [] };
+    }
   })
-  .post('/', ({ body }: { body: any }) => {
-    return { success: true, message: 'Produk berhasil ditambahkan', data: body };
+  .post('/', async ({ body }: { body: any }) => {
+    try {
+      const id = `prod-${Date.now()}`;
+      await db.insert(products).values({
+        id,
+        barcode: body.barcode,
+        sku: body.sku || `SKU-${Date.now()}`,
+        name: body.name,
+        categoryId: body.categoryId,
+        costPrice: body.costPrice.toString(),
+        sellPrice: body.sellPrice.toString(),
+        stock: body.stock || 0,
+        unit: body.unit || 'pcs',
+        imageUrl: body.imageUrl || null
+      });
+
+      return { success: true, message: 'Produk berhasil ditambahkan', data: { id, ...body } };
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
   }, {
     body: t.Object({
       barcode: t.String(),
-      sku: t.String(),
+      sku: t.Optional(t.String()),
       name: t.String(),
-      categoryId: t.String(),
+      categoryId: t.Optional(t.String()),
       costPrice: t.Number(),
       sellPrice: t.Number(),
-      stock: t.Number(),
-      unit: t.String(),
+      stock: t.Optional(t.Number()),
+      unit: t.Optional(t.String()),
       imageUrl: t.Optional(t.String())
     })
   });

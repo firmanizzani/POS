@@ -1,11 +1,31 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { Package, Plus, Search, Edit3, Trash2, Barcode, X } from 'lucide-svelte';
+  import { api } from '$lib/api/eden';
 
-  let products = [
-    { id: 'prod-101', barcode: '8991000000101', sku: 'INDOMIE-GORENG-SP', name: 'Indomie Goreng Spesial 85g', category: 'Mie & Makanan Instan', costPrice: 2800, sellPrice: 3500, stock: 200, unit: 'pcs', imageUrl: '' },
-    { id: 'prod-118', barcode: '8991000000118', sku: 'AQUA-600ML', name: 'Aqua Air Mineral 600ml', category: 'Air Mineral & Isotonik', costPrice: 2500, sellPrice: 3800, stock: 120, unit: 'botol', imageUrl: '' },
-    { id: 'prod-128', barcode: '8991000000128', sku: 'BIMOLI-1L', name: 'Minyak Goreng Bimoli 1L', category: 'Bumbu & Kebutuhan Dapur', costPrice: 16500, sellPrice: 19500, stock: 30, unit: 'pouch', imageUrl: '' }
-  ];
+  let products: any[] = [];
+
+  onMount(async () => {
+    try {
+      const res: any = await api.products.get();
+      if (res?.data?.data && Array.isArray(res.data.data)) {
+        products = res.data.data.map((p: any) => ({
+          id: p.id,
+          barcode: p.barcode,
+          sku: p.sku,
+          name: p.name,
+          category: p.categoryName || 'Lainnya',
+          costPrice: Number(p.costPrice),
+          sellPrice: Number(p.sellPrice),
+          stock: Number(p.stock),
+          unit: p.unit || 'pcs',
+          imageUrl: p.imageUrl || ''
+        }));
+      }
+    } catch (e) {
+      console.warn('Failed fetching products from API', e);
+    }
+  });
 
   let searchQuery = '';
   let showModal = false;
