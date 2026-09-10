@@ -14,8 +14,9 @@ export const app = new Elysia()
   .use(productRoutes)
   .use(cashierRoutes)
   .use(analyticsRoutes)
-  .listen(3000);
-
-console.log(`🚀 Server Elysia.js POS running at http://${app.server?.hostname}:${app.server?.port}`);
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(3000);
+  console.log(`🚀 Server Elysia.js POS running at http://${app.server?.hostname}:${app.server?.port}`);
+}
 
 export type App = typeof app;
