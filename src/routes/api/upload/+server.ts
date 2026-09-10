@@ -6,6 +6,7 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const rawName = (formData.get("productName") as string) || file.name || "produk";
 
     if (!file || typeof file === "string") {
       return json({ success: false, message: "Tidak ada file yang dikirim" }, { status: 400 });
@@ -22,7 +23,14 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ success: false, message: "Ukuran file maksimal 2MB" }, { status: 400 });
     }
 
-    const filename = `products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const ext = file.name.split('.').pop() || 'jpg';
+    const cleanProductName = rawName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    const filename = `products/${cleanProductName}-${Date.now()}.${ext}`;
     const blob = await put(filename, file, {
       access: "public"
     });

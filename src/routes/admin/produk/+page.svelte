@@ -66,6 +66,9 @@
     try {
       const fd = new FormData();
       fd.append('file', file);
+      if (form.name) {
+        fd.append('productName', form.name);
+      }
       const res = await fetch('/api/upload', { method: 'POST', body: fd }).then(r => r.json());
       if (res.success) {
         form.imageUrl = res.url;
