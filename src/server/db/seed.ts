@@ -93,7 +93,18 @@ export async function seedDatabase() {
     // Perlengkapan Rumah Tangga
     { name: 'Tissue Paseo Soft Pack 250s', categoryId: 'cat-10', costPrice: '11000', sellPrice: '14000', stock: 40, minStockAlert: 8 },
     { name: 'Baterai ABC Alkaline AA Pack/2', categoryId: 'cat-10', costPrice: '11500', sellPrice: '14500', stock: 30, minStockAlert: 6 },
-    { name: 'Korek Api Gas Tokai', categoryId: 'cat-10', costPrice: '2500', sellPrice: '4000', stock: 100, minStockAlert: 20 }
+    { name: 'Korek Api Gas Tokai', categoryId: 'cat-10', costPrice: '2500', sellPrice: '4000', stock: 100, minStockAlert: 20 },
+    { name: 'Lampu LED Philips Essential 10W E27', categoryId: 'cat-10', costPrice: '24000', sellPrice: '31000', stock: 25, minStockAlert: 5 },
+    { name: 'Stop Kontak Uticon 3 Lubang + Kabel 1.5M', categoryId: 'cat-10', costPrice: '38000', sellPrice: '48000', stock: 15, minStockAlert: 3 },
+    { name: 'Lakban Bening Nachi Tape 2 Inch', categoryId: 'cat-10', costPrice: '9500', sellPrice: '13000', stock: 35, minStockAlert: 7 },
+    { name: 'Gunting Dapur Stainless Multi-Purpose', categoryId: 'cat-10', costPrice: '12000', sellPrice: '16500', stock: 20, minStockAlert: 4 },
+    { name: 'Sapu Nilon Halus Lion Star', categoryId: 'cat-10', costPrice: '22000', sellPrice: '28000', stock: 15, minStockAlert: 3 },
+    { name: 'Kantong Plastik Sampah Roll Hitam 45x50cm', categoryId: 'cat-10', costPrice: '8500', sellPrice: '12000', stock: 40, minStockAlert: 8 },
+    { name: 'Spons Cuci Piring Hijau Scotch-Brite', categoryId: 'cat-10', costPrice: '4500', sellPrice: '6500', stock: 50, minStockAlert: 10 },
+    { name: 'Super Pell Pembersih Lantai Apple 770ml', categoryId: 'cat-10', costPrice: '11000', sellPrice: '14500', stock: 30, minStockAlert: 6 },
+    { name: 'Stella Air Freshener Spray Lemon 400ml', categoryId: 'cat-10', costPrice: '21000', sellPrice: '26500', stock: 18, minStockAlert: 4 },
+    { name: 'Bagus Kamfer Anti Ngengat 150g', categoryId: 'cat-10', costPrice: '13500', sellPrice: '17500', stock: 25, minStockAlert: 5 },
+    { name: 'Ember Plastik Lion Star 3 Gallon (12L)', categoryId: 'cat-10', costPrice: '18000', sellPrice: '24000', stock: 12, minStockAlert: 3 }
   ];
 
   let index = 100;
