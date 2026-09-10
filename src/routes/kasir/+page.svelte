@@ -135,9 +135,9 @@
 
   onMount(async () => {
     try {
-      const res: any = await api.products.get();
-      if (res?.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        products = res.data.data.map((p: any) => ({
+      const res = await fetch('/api/products').then(r => r.json());
+      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+        products = res.data.map((p: any) => ({
           id: p.id,
           barcode: p.barcode,
           name: p.name,
