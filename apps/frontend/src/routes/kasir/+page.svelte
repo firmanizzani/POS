@@ -163,11 +163,11 @@
   }
 </script>
 
-<div class="flex-1 flex overflow-hidden bg-slate-50">
+<div class="flex-1 flex overflow-hidden bg-slate-50 h-full">
   <!-- LEFT: Tap-Tap Product Catalog & Barcode Search (Light Theme) -->
-  <div class="flex-1 flex flex-col border-r border-slate-200 p-4 space-y-4 overflow-hidden bg-slate-50">
+  <div class="flex-1 flex flex-col border-r border-slate-200 p-4 space-y-4 overflow-hidden bg-slate-50 h-full">
     <!-- Top Search & Barcode Bar -->
-    <div class="flex items-center space-x-3">
+    <div class="flex items-center space-x-3 shrink-0">
       <div class="relative flex-1">
         <Search class="w-5 h-5 absolute left-3.5 top-3 text-slate-400" />
         <input
@@ -191,7 +191,7 @@
     </div>
 
     <!-- Category Filter Tabs -->
-    <div class="flex space-x-2 overflow-x-auto pb-1 scrollbar-none">
+    <div class="flex space-x-2 overflow-x-auto pb-1 scrollbar-none shrink-0">
       {#each categories as cat}
         <button
           on:click={() => (selectedCategory = cat)}
@@ -202,8 +202,8 @@
       {/each}
     </div>
 
-    <!-- Product Tap-Tap Grid -->
-    <div class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pr-1">
+    <!-- Product Tap-Tap Grid (Scrollable Container) -->
+    <div class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pr-1 min-h-0">
       {#each filteredProducts as p}
         <button
           on:click={() => addToCart(p)}
@@ -231,9 +231,9 @@
   </div>
 
   <!-- RIGHT: Cart, Actions & Checkout Panel (Light Theme) -->
-  <div class="w-[420px] bg-white flex flex-col justify-between p-4 space-y-4 border-l border-slate-200 shadow-sm">
+  <div class="w-[420px] bg-white flex flex-col justify-between p-4 space-y-4 border-l border-slate-200 shadow-sm h-full overflow-hidden">
     <!-- Header Actions (Hold & Shift) -->
-    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-3 shrink-0">
       <div class="flex items-center space-x-2">
         <span class="text-base font-bold text-slate-900">Keranjang Belanja</span>
         <span class="bg-sky-100 text-sky-700 text-xs px-2.5 py-0.5 rounded-full font-bold">{ $cartItems.length } Item</span>
@@ -257,8 +257,8 @@
       </div>
     </div>
 
-    <!-- Cart Item List -->
-    <div class="flex-1 overflow-y-auto space-y-2 pr-1">
+    <!-- Cart Item List (Scrollable Area) -->
+    <div class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
       {#if $cartItems.length === 0}
         <div class="h-full flex flex-col items-center justify-center text-center text-slate-400 p-6 space-y-2">
           <Barcode class="w-12 h-12 stroke-[1.5] text-slate-300 animate-pulse" />
@@ -291,8 +291,8 @@
       {/if}
     </div>
 
-    <!-- Summary & Checkout Footer -->
-    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
+    <!-- Summary & Checkout Footer (ALWAYS FIXED AT BOTTOM) -->
+    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm shrink-0">
       <div class="space-y-1.5 text-xs text-slate-600">
         <div class="flex justify-between">
           <span>Subtotal</span>
