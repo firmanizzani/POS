@@ -84,19 +84,7 @@
       </div>
     </div>
 
-    <!-- Middle Features List -->
-    <div class="relative z-10 space-y-6">
-      <p class="text-sky-100 text-lg font-semibold leading-relaxed">
-        Kelola minimarket Anda lebih cepat, lebih akurat, dan lebih profesional.
-      </p>
-      <div class="space-y-4">
-        {#each ['✅ Transaksi kasir super cepat dengan scan barcode', '✅ Laporan omset & profit bersih real-time', '✅ Manajemen stok, supplier & purchase order', '✅ Sistem member loyalty & promo engine'] as feature}
-          <div class="flex items-center space-x-3">
-            <span class="text-sky-100 text-sm font-medium">{feature}</span>
-          </div>
-        {/each}
-      </div>
-    </div>
+
 
     <!-- Footer -->
     <div class="relative z-10">
