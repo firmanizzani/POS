@@ -6,9 +6,7 @@
     Truck,
     ClipboardCheck,
     Users,
-    Percent,
-    TrendingUp,
-    FileSpreadsheet
+    Percent
   } from 'lucide-svelte';
 
   const adminNav = [
@@ -21,9 +19,9 @@
   ];
 </script>
 
-<div class="flex-1 flex overflow-hidden bg-slate-950">
-  <!-- Admin Sidebar -->
-  <aside class="w-64 bg-slate-900 border-r border-slate-800 p-4 space-y-4 flex flex-col justify-between">
+<div class="flex-1 flex overflow-hidden bg-slate-100">
+  <!-- Admin Sidebar Light Theme -->
+  <aside class="w-64 bg-white border-r border-slate-200 p-4 space-y-4 flex flex-col justify-between shadow-sm">
     <div class="space-y-6">
       <div class="px-2">
         <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">MODUL ADMIN & MANAGER</h2>
@@ -34,7 +32,7 @@
         {#each adminNav as nav}
           <a
             href={nav.href}
-            class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {$page.url.pathname === nav.href ? 'bg-sky-600/20 text-sky-400 border border-sky-500/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}"
+            class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {$page.url.pathname === nav.href ? 'bg-sky-50 text-sky-700 border border-sky-200 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}"
           >
             <svelte:component this={nav.icon} class="w-4 h-4" />
             <span>{nav.label}</span>
@@ -44,20 +42,20 @@
     </div>
 
     <!-- System Status Footer -->
-    <div class="bg-slate-950 border border-slate-800 p-3 rounded-2xl space-y-2 text-xs">
+    <div class="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2 text-xs">
       <div class="flex items-center justify-between">
-        <span class="text-slate-400">Database API:</span>
-        <span class="text-emerald-400 font-bold">PostgreSQL</span>
+        <span class="text-slate-500">Database API:</span>
+        <span class="text-emerald-700 font-bold">PostgreSQL</span>
       </div>
       <div class="flex items-center justify-between">
-        <span class="text-slate-400">Backend Server:</span>
-        <span class="text-sky-400 font-bold">Elysia.js</span>
+        <span class="text-slate-500">Backend Server:</span>
+        <span class="text-sky-700 font-bold">Elysia.js</span>
       </div>
     </div>
   </aside>
 
   <!-- Admin Main Content -->
-  <div class="flex-1 overflow-y-auto p-6 bg-slate-950">
+  <div class="flex-1 overflow-y-auto p-6 bg-slate-100">
     <slot />
   </div>
 </div>
