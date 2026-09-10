@@ -203,26 +203,50 @@
     </div>
 
     <!-- Product Tap-Tap Grid (Scrollable Container) -->
-    <div class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pr-1 min-h-0">
+    <div class="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 pr-1 min-h-0">
       {#each filteredProducts as p}
         <button
           on:click={() => addToCart(p)}
-          class="bg-white hover:bg-sky-50/50 border border-slate-200 hover:border-sky-400 p-3.5 rounded-2xl flex flex-col justify-between text-left transition-all group relative shadow-sm hover:shadow-md active:scale-95"
+          class="bg-white hover:border-sky-500 border border-slate-200 p-2.5 rounded-2xl flex flex-col justify-between text-left transition-all group relative shadow-sm hover:shadow-md active:scale-[0.98] overflow-hidden"
         >
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-3xl">{p.image}</span>
-            <span class="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded-full border border-slate-200">{p.category}</span>
+          <!-- Product Image Container -->
+          <div class="w-full h-28 bg-slate-100 rounded-xl overflow-hidden relative mb-2.5 flex items-center justify-center border border-slate-100 group-hover:border-sky-100 transition-colors">
+            {#if p.imageUrl}
+              <img src={p.imageUrl} alt={p.name} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            {:else}
+              <span class="text-4xl group-hover:scale-110 transition-transform duration-300">{p.image || '📦'}</span>
+            {/if}
+
+            <!-- Overlay Badge: Category -->
+            <span class="absolute top-1.5 right-1.5 bg-white/95 backdrop-blur-sm text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-200 shadow-sm">
+              {p.category}
+            </span>
+
+            <!-- Overlay Badge: Stock -->
+            <span class="absolute bottom-1.5 left-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm {p.stock <= 5 ? 'bg-red-500 text-white' : 'bg-slate-900/80 text-white'}">
+              Stok: {p.stock}
+            </span>
           </div>
 
-          <div>
-            <h3 class="text-sm font-semibold text-slate-800 line-clamp-2 mb-1 group-hover:text-sky-600 transition-colors">{p.name}</h3>
-            <p class="text-xs text-slate-500 font-mono mb-2">Stok: {p.stock}</p>
-          </div>
+          <!-- Product Details -->
+          <div class="flex-1 flex flex-col justify-between">
+            <div>
+              <h3 class="text-xs font-bold text-slate-800 line-clamp-2 mb-1 group-hover:text-sky-600 transition-colors leading-snug">{p.name}</h3>
+              <p class="text-[10px] text-slate-400 font-mono flex items-center space-x-1 mb-2">
+                <Barcode class="w-3 h-3 text-slate-400 shrink-0" />
+                <span class="truncate">{p.barcode}</span>
+              </p>
+            </div>
 
-          <div class="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
-            <span class="text-sm font-bold text-sky-700">{formatRp(p.sellPrice)}</span>
-            <div class="bg-sky-50 text-sky-600 p-1.5 rounded-xl group-hover:bg-sky-600 group-hover:text-white transition-colors">
-              <Plus class="w-4 h-4" />
+            <!-- Price & Quick Add Button Footer -->
+            <div class="flex items-center justify-between border-t border-slate-100 pt-2 mt-auto">
+              <div>
+                <span class="text-[10px] text-slate-400 font-semibold block uppercase">Harga Jual</span>
+                <span class="text-sm font-black text-sky-700 leading-none">{formatRp(p.sellPrice)}</span>
+              </div>
+              <div class="bg-sky-600 text-white p-1.5 rounded-xl shadow-md shadow-sky-600/20 group-hover:bg-sky-700 transition-colors">
+                <Plus class="w-4 h-4" />
+              </div>
             </div>
           </div>
         </button>
