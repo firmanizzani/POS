@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
   import {
     LayoutDashboard,
+    FileText,
     Package,
     Truck,
     ClipboardCheck,
@@ -11,6 +12,7 @@
 
   const adminNav = [
     { href: '/admin', label: 'Dashboard Analitik', icon: LayoutDashboard },
+    { href: '/admin/transaksi', label: 'Riwayat Transaksi', icon: FileText },
     { href: '/admin/produk', label: 'Master Produk', icon: Package },
     { href: '/admin/supplier', label: 'Supplier & PO', icon: Truck },
     { href: '/admin/stok-opname', label: 'Stock Opname', icon: ClipboardCheck },
