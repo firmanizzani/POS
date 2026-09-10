@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm run build --workspace=apps/frontend",
+  "framework": "sveltekit",
+  "outputDirectory": "apps/frontend/.svelte-kit/output"
+}
