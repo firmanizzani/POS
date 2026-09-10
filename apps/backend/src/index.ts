@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
+import { authRoutes } from './routes/auth.js';
 import { productRoutes } from './routes/products.js';
 import { cashierRoutes } from './routes/cashier.js';
 import { analyticsRoutes } from './routes/analytics.js';
@@ -9,6 +10,7 @@ export const app = new Elysia()
   .use(cors())
   .use(swagger())
   .get('/', () => ({ message: 'Minimarket POS API Server is running', status: 'OK' }))
+  .use(authRoutes)
   .use(productRoutes)
   .use(cashierRoutes)
   .use(analyticsRoutes)

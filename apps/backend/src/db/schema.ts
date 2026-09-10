@@ -1,4 +1,5 @@
 import { pgTable, text, integer, numeric, timestamp, varchar, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // 1. Users / Employees
 export const users = pgTable('users', {
@@ -9,6 +10,12 @@ export const users = pgTable('users', {
   pinCode: varchar('pin_code', { length: 6 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const usersRelations = relations(users, ({ many }) => ({
+  shifts: many(cashierShifts),
+  transactions: many(transactions),
+  stockAdjustments: many(stockAdjustments),
+}));
 
 // 2. Cashier Shifts
 export const cashierShifts = pgTable('cashier_shifts', {
@@ -23,12 +30,24 @@ export const cashierShifts = pgTable('cashier_shifts', {
   status: varchar('status', { length: 20 }).notNull().default('open'), // 'open' | 'closed'
 });
 
+export const cashierShiftsRelations = relations(cashierShifts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [cashierShifts.userId],
+    references: [users.id],
+  }),
+  transactions: many(transactions),
+}));
+
 // 3. Categories & Master Products
 export const categories = pgTable('categories', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
 });
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  products: many(products),
+}));
 
 export const products = pgTable('products', {
   id: text('id').primaryKey(),
@@ -47,6 +66,15 @@ export const products = pgTable('products', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const productsRelations = relations(products, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [products.categoryId],
+    references: [categories.id],
+  }),
+  transactionItems: many(transactionItems),
+  stockAdjustments: many(stockAdjustments),
+}));
+
 // 4. Suppliers & Purchase Orders (PO)
 export const suppliers = pgTable('suppliers', {
   id: text('id').primaryKey(),
@@ -55,6 +83,10 @@ export const suppliers = pgTable('suppliers', {
   email: text('email'),
   address: text('address'),
 });
+
+export const suppliersRelations = relations(suppliers, ({ many }) => ({
+  purchaseOrders: many(purchaseOrders),
+}));
 
 export const purchaseOrders = pgTable('purchase_orders', {
   id: text('id').primaryKey(),
@@ -67,6 +99,13 @@ export const purchaseOrders = pgTable('purchase_orders', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const purchaseOrdersRelations = relations(purchaseOrders, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [purchaseOrders.supplierId],
+    references: [suppliers.id],
+  }),
+}));
+
 // 5. Stock Opname & Adjustment
 export const stockAdjustments = pgTable('stock_adjustments', {
   id: text('id').primaryKey(),
@@ -78,6 +117,17 @@ export const stockAdjustments = pgTable('stock_adjustments', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const stockAdjustmentsRelations = relations(stockAdjustments, ({ one }) => ({
+  product: one(products, {
+    fields: [stockAdjustments.productId],
+    references: [products.id],
+  }),
+  user: one(users, {
+    fields: [stockAdjustments.adjustedBy],
+    references: [users.id],
+  }),
+}));
+
 // 6. Members & Points
 export const members = pgTable('members', {
   id: text('id').primaryKey(),
@@ -88,6 +138,10 @@ export const members = pgTable('members', {
   tier: varchar('tier', { length: 20 }).notNull().default('bronze'), // 'bronze' | 'silver' | 'gold'
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const membersRelations = relations(members, ({ many }) => ({
+  transactions: many(transactions),
+}));
 
 // 7. Promos & Discounts
 export const promos = pgTable('promos', {
@@ -101,6 +155,10 @@ export const promos = pgTable('promos', {
   endDate: timestamp('end_date').notNull(),
   isActive: boolean('is_active').notNull().default(true),
 });
+
+export const promosRelations = relations(promos, ({ many }) => ({
+  transactions: many(transactions),
+}));
 
 // 8. Transactions & Cart Hold
 export const transactions = pgTable('transactions', {
@@ -120,6 +178,26 @@ export const transactions = pgTable('transactions', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const transactionsRelations = relations(transactions, ({ one, many }) => ({
+  cashier: one(users, {
+    fields: [transactions.cashierId],
+    references: [users.id],
+  }),
+  shift: one(cashierShifts, {
+    fields: [transactions.shiftId],
+    references: [cashierShifts.id],
+  }),
+  member: one(members, {
+    fields: [transactions.memberId],
+    references: [members.id],
+  }),
+  promo: one(promos, {
+    fields: [transactions.promoId],
+    references: [promos.id],
+  }),
+  items: many(transactionItems),
+}));
+
 export const transactionItems = pgTable('transaction_items', {
   id: text('id').primaryKey(),
   transactionId: text('transaction_id').notNull().references(() => transactions.id),
@@ -131,6 +209,17 @@ export const transactionItems = pgTable('transaction_items', {
   subtotal: numeric('subtotal', { precision: 12, scale: 2 }).notNull(),
 });
 
+export const transactionItemsRelations = relations(transactionItems, ({ one }) => ({
+  transaction: one(transactions, {
+    fields: [transactionItems.transactionId],
+    references: [transactions.id],
+  }),
+  product: one(products, {
+    fields: [transactionItems.productId],
+    references: [products.id],
+  }),
+}));
+
 export const heldCarts = pgTable('held_carts', {
   id: text('id').primaryKey(),
   label: text('label').notNull(),
@@ -138,3 +227,10 @@ export const heldCarts = pgTable('held_carts', {
   cartData: jsonb('cart_data').notNull(), // items, member, promo
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const heldCartsRelations = relations(heldCarts, ({ one }) => ({
+  cashier: one(users, {
+    fields: [heldCarts.cashierId],
+    references: [users.id],
+  }),
+}));
