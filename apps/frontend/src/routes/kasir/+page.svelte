@@ -47,19 +47,64 @@
 
   let lastCompletedTransaction: any = null;
 
-  // Mock Products Database
+  // Full Minimarket Database
   const products = [
-    { id: 'prod-1', barcode: '899100110011', name: 'Indomie Goreng Original 85g', category: 'Makanan', sellPrice: 3200, stock: 120, image: '🍜' },
-    { id: 'prod-2', barcode: '899200220022', name: 'Air Mineral Aqua 600ml', category: 'Minuman', sellPrice: 3500, stock: 85, image: '💧' },
-    { id: 'prod-3', barcode: '899300330033', name: 'Milo Powder 3in1 20g', category: 'Minuman', sellPrice: 3000, stock: 45, image: '☕' },
-    { id: 'prod-4', barcode: '899400440044', name: 'Chitato Sapi Panggang 68g', category: 'Snack', sellPrice: 11000, stock: 30, image: '🥔' },
-    { id: 'prod-5', barcode: '899500550055', name: 'Teh Botol Sosro 450ml', category: 'Minuman', sellPrice: 5000, stock: 60, image: '🧃' },
-    { id: 'prod-6', barcode: '899600660066', name: 'Roti Tawar Kupas Sari Roti', category: 'Makanan', sellPrice: 16000, stock: 15, image: '🍞' },
-    { id: 'prod-7', barcode: '899700770077', name: 'Sabun Lifebuoy Red 110g', category: 'Personal Care', sellPrice: 4500, stock: 40, image: '🧼' },
-    { id: 'prod-8', barcode: '899800880088', name: 'Pepsodent Soft 190g', category: 'Personal Care', sellPrice: 12500, stock: 25, image: '🪥' }
+    // Mie & Makanan Instan
+    { id: 'prod-101', barcode: '8991000000101', name: 'Indomie Goreng Spesial 85g', category: 'Mie & Makanan Instan', sellPrice: 3500, stock: 200, image: '🍜' },
+    { id: 'prod-102', barcode: '8991000000102', name: 'Indomie Kuah Rasa Ayam Bawang 75g', category: 'Mie & Makanan Instan', sellPrice: 3400, stock: 150, image: '🍜' },
+    { id: 'prod-103', barcode: '8991000000103', name: 'Indomie Kuah Rasa Soto Mie 70g', category: 'Mie & Makanan Instan', sellPrice: 3400, stock: 150, image: '🍜' },
+    { id: 'prod-104', barcode: '8991000000104', name: 'Mie Sedaap Goreng 90g', category: 'Mie & Makanan Instan', sellPrice: 3500, stock: 120, image: '🍜' },
+    { id: 'prod-105', barcode: '8991000000105', name: 'Pop Mie Rasa Ayam 75g', category: 'Mie & Makanan Instan', sellPrice: 5500, stock: 60, image: '🍜' },
+    { id: 'prod-106', barcode: '8991000000106', name: 'Samyang Buldak Carbonara 130g', category: 'Mie & Makanan Instan', sellPrice: 22500, stock: 30, image: '🍜' },
+
+    // Biskuit & Roti
+    { id: 'prod-107', barcode: '8991000000107', name: 'Oreo Vanilla 133g', category: 'Biskuit & Roti', sellPrice: 9500, stock: 50, image: '🍪' },
+    { id: 'prod-108', barcode: '8991000000108', name: 'Roma Kelapa 300g', category: 'Biskuit & Roti', sellPrice: 11500, stock: 40, image: '🍞' },
+    { id: 'prod-109', barcode: '8991000000109', name: 'Khong Guan Red Assorted Biscuit 300g', category: 'Biskuit & Roti', sellPrice: 49000, stock: 15, image: '🍪' },
+    { id: 'prod-110', barcode: '8991000000110', name: 'Tango Wafer Cokelat 130g', category: 'Biskuit & Roti', sellPrice: 8000, stock: 45, image: '🍫' },
+
+    // Camilan & Snack
+    { id: 'prod-112', barcode: '8991000000112', name: 'Chitato Sapi Panggang 68g', category: 'Camilan & Snack', sellPrice: 11500, stock: 50, image: '🥔' },
+    { id: 'prod-113', barcode: '8991000000113', name: 'Chitato Lite Rumput Laut 68g', category: 'Camilan & Snack', sellPrice: 11500, stock: 40, image: '🥔' },
+    { id: 'prod-114', barcode: '8991000000114', name: 'Silverqueen Milk Chocolate 58g', category: 'Camilan & Snack', sellPrice: 16000, stock: 35, image: '🍫' },
+    { id: 'prod-115', barcode: '8991000000115', name: 'Kusuka Keripik Singkong Balado 180g', category: 'Camilan & Snack', sellPrice: 14000, stock: 30, image: '🥔' },
+
+    // Air Mineral & Isotonik
+    { id: 'prod-117', barcode: '8991000000117', name: 'Le Minerale 600ml', category: 'Air Mineral & Isotonik', sellPrice: 3500, stock: 120, image: '💧' },
+    { id: 'prod-118', barcode: '8991000000118', name: 'Aqua Air Mineral 600ml', category: 'Air Mineral & Isotonik', sellPrice: 3800, stock: 120, image: '💧' },
+    { id: 'prod-119', barcode: '8991000000119', name: 'Aqua Air Mineral 1500ml', category: 'Air Mineral & Isotonik', sellPrice: 7000, stock: 60, image: '💧' },
+    { id: 'prod-120', barcode: '8991000000120', name: 'Pocari Sweat 500ml', category: 'Air Mineral & Isotonik', sellPrice: 8500, stock: 48, image: '⚡' },
+
+    // Minuman Kemasan & Susu
+    { id: 'prod-122', barcode: '8991000000122', name: 'Teh Botol Sosro 450ml', category: 'Minuman Kemasan & Susu', sellPrice: 5500, stock: 80, image: '🧃' },
+    { id: 'prod-123', barcode: '8991000000123', name: 'Ultra Milk Cokelat 250ml', category: 'Minuman Kemasan & Susu', sellPrice: 7000, stock: 60, image: '🥛' },
+    { id: 'prod-124', barcode: '8991000000124', name: 'Ultra Milk Full Cream 1000ml', category: 'Minuman Kemasan & Susu', sellPrice: 20000, stock: 24, image: '🥛' },
+    { id: 'prod-125', barcode: '8991000000125', name: 'Nescafé Original Can 220ml', category: 'Minuman Kemasan & Susu', sellPrice: 8500, stock: 48, image: '☕' },
+
+    // Bumbu & Kebutuhan Dapur
+    { id: 'prod-128', barcode: '8991000000128', name: 'Minyak Goreng Bimoli 1L', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 19500, stock: 30, image: '🍾' },
+    { id: 'prod-129', barcode: '8991000000129', name: 'Minyak Goreng Sania 2L', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 37000, stock: 20, image: '🍾' },
+    { id: 'prod-130', barcode: '8991000000130', name: 'Gula Pasir Gulaku Premium 1kg', category: 'Bumbu & Kebutuhan Dapur', sellPrice: 17500, stock: 40, image: '🍚' },
+
+    // Sabun & Kebersihan
+    { id: 'prod-135', barcode: '8991000000135', name: 'Lifebuoy Sabun Mandi Red 110g', category: 'Sabun & Perawatan Tubuh', sellPrice: 5000, stock: 50, image: '🧼' },
+    { id: 'prod-141', barcode: '8991000000141', name: 'Rinso Anti Noda Deterjen Powder 770g', category: 'Kebutuhan Kebersihan Rumah', sellPrice: 24000, stock: 25, image: '🧺' },
+    { id: 'prod-142', barcode: '8991000000142', name: 'Mama Lemon Pencuci Piring Pouch 680ml', category: 'Kebutuhan Kebersihan Rumah', sellPrice: 11500, stock: 30, image: '🍋' }
   ];
 
-  const categories = ['All', 'Makanan', 'Minuman', 'Snack', 'Personal Care'];
+  const categories = [
+    'All',
+    'Mie & Makanan Instan',
+    'Biskuit & Roti',
+    'Camilan & Snack',
+    'Air Mineral & Isotonik',
+    'Minuman Kemasan & Susu',
+    'Bumbu & Kebutuhan Dapur',
+    'Sabun & Perawatan Tubuh',
+    'Kebutuhan Kebersihan Rumah',
+    'Kebutuhan Ibu & Bayi',
+    'Perlengkapan Rumah Tangga'
+  ];
 
   $: filteredProducts = products.filter((p) => {
     const matchCategory = selectedCategory === 'All' || p.category === selectedCategory;
