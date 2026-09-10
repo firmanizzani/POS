@@ -89,8 +89,30 @@
     isSaving = true;
     try {
       if (editingId) {
-        products = products.map(p => p.id === editingId ? { ...p, ...form } : p);
+        // Update produk ke database
+        const res = await fetch(`/api/products/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            barcode: form.barcode,
+            sku: form.sku,
+            name: form.name,
+            costPrice: Number(form.costPrice),
+            sellPrice: Number(form.sellPrice),
+            stock: Number(form.stock),
+            unit: form.unit,
+            imageUrl: form.imageUrl || ''
+          })
+        }).then(r => r.json());
+
+        if (res.success) {
+          products = products.map(p => p.id === editingId ? { ...p, ...form } : p);
+        } else {
+          alert('Gagal mengupdate produk: ' + (res.message || 'Unknown error'));
+          return;
+        }
       } else {
+        // Tambah produk baru ke database
         const res = await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -122,9 +144,18 @@
     }
   }
 
-  function deleteProduct(id: string) {
+  async function deleteProduct(id: string) {
     if (confirm('Yakin ingin menghapus produk ini?')) {
-      products = products.filter(p => p.id !== id);
+      try {
+        const res = await fetch(`/api/products/${id}`, { method: 'DELETE' }).then(r => r.json());
+        if (res.success) {
+          products = products.filter(p => p.id !== id);
+        } else {
+          alert('Gagal menghapus produk: ' + res.message);
+        }
+      } catch (e: any) {
+        alert('Error hapus produk: ' + e.message);
+      }
     }
   }
 

@@ -44,7 +44,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
         barcode: body.barcode,
         sku: body.sku || `SKU-${Date.now()}`,
         name: body.name,
-        categoryId: body.categoryId,
+        categoryId: body.categoryId || null,
         costPrice: body.costPrice.toString(),
         sellPrice: body.sellPrice.toString(),
         stock: body.stock || 0,
@@ -61,11 +61,39 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       barcode: t.String(),
       sku: t.Optional(t.String()),
       name: t.String(),
-      categoryId: t.Optional(t.String()),
+      categoryId: t.Optional(t.Nullable(t.String())),
       costPrice: t.Number(),
       sellPrice: t.Number(),
       stock: t.Optional(t.Number()),
       unit: t.Optional(t.String()),
-      imageUrl: t.Optional(t.String())
+      imageUrl: t.Optional(t.Nullable(t.String()))
     })
+  })
+  .put('/:id', async ({ params, body }: { params: { id: string }, body: any }) => {
+    try {
+      await db.update(products)
+        .set({
+          barcode: body.barcode,
+          sku: body.sku,
+          name: body.name,
+          costPrice: body.costPrice ? body.costPrice.toString() : undefined,
+          sellPrice: body.sellPrice ? body.sellPrice.toString() : undefined,
+          stock: body.stock,
+          unit: body.unit,
+          imageUrl: body.imageUrl !== undefined ? body.imageUrl : undefined
+        })
+        .where(eq(products.id, params.id));
+
+      return { success: true, message: 'Produk berhasil diupdate' };
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  })
+  .delete('/:id', async ({ params }: { params: { id: string } }) => {
+    try {
+      await db.delete(products).where(eq(products.id, params.id));
+      return { success: true, message: 'Produk berhasil dihapus' };
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
   });
