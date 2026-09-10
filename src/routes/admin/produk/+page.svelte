@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Package, Plus, Search, Edit3, Trash2, Barcode, X } from 'lucide-svelte';
-  import { api } from '$lib/api/eden';
+  import { Package, Plus, Search, Edit3, Trash2, Barcode, X, Upload } from 'lucide-svelte';
 
   let products: any[] = [];
 
@@ -15,6 +14,7 @@
           sku: p.sku,
           name: p.name,
           category: p.categoryName || 'Lainnya',
+          categoryId: p.categoryId,
           costPrice: Number(p.costPrice),
           sellPrice: Number(p.sellPrice),
           stock: Number(p.stock),
@@ -30,6 +30,9 @@
   let searchQuery = '';
   let showModal = false;
   let editingId: string | null = null;
+  let isUploading = false;
+  let isSaving = false;
+  let uploadError = '';
 
   let form = {
     barcode: '',
@@ -47,22 +50,76 @@
 
   function openCreateModal() {
     editingId = null;
+    uploadError = '';
     form = { barcode: `899${Math.floor(100000000 + Math.random() * 900000000)}`, sku: '', name: '', category: 'Mie & Makanan Instan', costPrice: 0, sellPrice: 0, stock: 0, unit: 'pcs', imageUrl: '' };
     showModal = true;
   }
 
-  function saveProduct() {
+  async function handleFileSelect(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    uploadError = '';
+    isUploading = true;
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd }).then(r => r.json());
+      if (res.success) {
+        form.imageUrl = res.url;
+      } else {
+        uploadError = res.message || 'Gagal upload gambar';
+      }
+    } catch (e: any) {
+      uploadError = 'Gagal upload: ' + e.message;
+    } finally {
+      isUploading = false;
+      input.value = '';
+    }
+  }
+
+  async function saveProduct() {
     if (!form.name || !form.barcode) {
       alert('Nama produk & barcode wajib diisi!');
       return;
     }
 
-    if (editingId) {
-      products = products.map(p => p.id === editingId ? { ...p, ...form } : p);
-    } else {
-      products = [...products, { id: `prod-${Date.now()}`, ...form }];
+    isSaving = true;
+    try {
+      if (editingId) {
+        products = products.map(p => p.id === editingId ? { ...p, ...form } : p);
+      } else {
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            barcode: form.barcode,
+            sku: form.sku || `SKU-${Date.now()}`,
+            name: form.name,
+            categoryId: null,
+            costPrice: Number(form.costPrice),
+            sellPrice: Number(form.sellPrice),
+            stock: Number(form.stock),
+            unit: form.unit,
+            imageUrl: form.imageUrl || null
+          })
+        }).then(r => r.json());
+
+        if (res.success) {
+          products = [...products, { id: res.data?.id || `prod-${Date.now()}`, ...form }];
+        } else {
+          alert('Gagal menyimpan produk: ' + (res.message || 'Unknown error'));
+          return;
+        }
+      }
+      showModal = false;
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isSaving = false;
     }
-    showModal = false;
   }
 
   function deleteProduct(id: string) {
@@ -190,13 +247,42 @@
           </div>
         </div>
         <div>
-          <label class="text-slate-600 font-bold">URL Gambar (Opsional)</label>
-          <input type="text" bind:value={form.imageUrl} placeholder="https://..." class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
+          <label class="text-slate-600 font-bold">Foto Produk (Opsional)</label>
+          <div class="mt-1 flex items-center gap-3">
+            <!-- Preview -->
+            <div class="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+              {#if form.imageUrl}
+                <img src={form.imageUrl} alt="preview" class="w-full h-full object-cover" />
+              {:else}
+                <Package class="w-6 h-6 text-slate-300" />
+              {/if}
+            </div>
+            <!-- Upload button -->
+            <div class="flex-1">
+              <label class="cursor-pointer flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-slate-300 hover:border-sky-400 rounded-xl text-slate-500 hover:text-sky-600 transition-colors {isUploading ? 'opacity-50 pointer-events-none' : ''}">
+                {#if isUploading}
+                  <span class="inline-block w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></span>
+                  <span class="text-xs">Mengupload...</span>
+                {:else}
+                  <Upload class="w-4 h-4" />
+                  <span class="text-xs font-bold">{form.imageUrl ? 'Ganti Foto' : 'Upload Foto'}</span>
+                {/if}
+                <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" on:change={handleFileSelect} />
+              </label>
+              <p class="text-[10px] text-slate-400 mt-1">JPG, PNG, WEBP · Maks. 2MB</p>
+              {#if uploadError}
+                <p class="text-[10px] text-red-500 mt-1">{uploadError}</p>
+              {/if}
+              {#if form.imageUrl}
+                <button type="button" on:click={() => form.imageUrl = ''} class="text-[10px] text-red-400 hover:text-red-600 mt-1">Hapus foto</button>
+              {/if}
+            </div>
+          </div>
         </div>
       </div>
 
-      <button on:click={saveProduct} class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
-        SIMPAN PRODUK
+      <button on:click={saveProduct} disabled={isSaving || isUploading} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
+        {isSaving ? 'MENYIMPAN...' : 'SIMPAN PRODUK'}
       </button>
     </div>
   </div>
