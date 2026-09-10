@@ -106,7 +106,6 @@ export async function seedDatabase() {
       barcode,
       sku,
       unit: 'pcs',
-      unitName: 'pcs',
       ...item
     }).onConflictDoNothing();
   }

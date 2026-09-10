@@ -2,7 +2,7 @@ import { Elysia, t } from 'elysia';
 
 export const authRoutes = new Elysia({ prefix: '/auth' })
   // Login Cashier / Admin with Email & PIN
-  .post('/login', ({ body }) => {
+  .post('/login', ({ body }: { body: any }) => {
     if (body.email === 'admin@minimarket.com' && body.pinCode === '123456') {
       return {
         success: true,

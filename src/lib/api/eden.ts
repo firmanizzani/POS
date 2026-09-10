@@ -1,5 +1,5 @@
 import { edenTreaty } from '@elysiajs/eden';
-import type { App } from '../../../../apps/backend/src/index';
+import type { App } from '../../server/index';
 
 // Initialize type-safe Eden Client connecting SvelteKit to Elysia.js
 const getApiUrl = () => {

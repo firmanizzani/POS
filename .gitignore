@@ -7,6 +7,7 @@ yarn-error.log*
 
 # SvelteKit & Vite
 .svelte-kit/
+.vercel/
 build/
 dist/
 .vite/

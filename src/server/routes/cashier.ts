@@ -2,7 +2,7 @@ import { Elysia, t } from 'elysia';
 
 export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   // Shift Management: Clock-In (Kas Awal)
-  .post('/shift/clock-in', ({ body }) => {
+  .post('/shift/clock-in', ({ body }: { body: any }) => {
     return {
       success: true,
       data: {
@@ -22,7 +22,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   })
 
   // Shift Management: Clock-Out (Rekap Laci)
-  .post('/shift/clock-out', ({ body }) => {
+  .post('/shift/clock-out', ({ body }: { body: any }) => {
     return {
       success: true,
       data: {
@@ -47,7 +47,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   })
 
   // Hold Cart
-  .post('/cart/hold', ({ body }) => {
+  .post('/cart/hold', ({ body }: { body: any }) => {
     return {
       success: true,
       message: 'Keranjang berhasil disimpan (Hold)',
@@ -62,7 +62,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   })
 
   // Checkout Transaction
-  .post('/checkout', ({ body }) => {
+  .post('/checkout', ({ body }: { body: any }) => {
     const invoiceNumber = `INV-${Date.now()}`;
     return {
       success: true,

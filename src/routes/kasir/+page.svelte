@@ -47,8 +47,19 @@
 
   let lastCompletedTransaction: any = null;
 
+  interface ProductItem {
+    id: string;
+    barcode: string;
+    name: string;
+    category: string;
+    sellPrice: number;
+    stock: number;
+    image?: string;
+    imageUrl?: string;
+  }
+
   // Full Minimarket Database
-  const products = [
+  const products: ProductItem[] = [
     // Mie & Makanan Instan
     { id: 'prod-101', barcode: '8991000000101', name: 'Indomie Goreng Spesial 85g', category: 'Mie & Makanan Instan', sellPrice: 3500, stock: 200, image: '🍜' },
     { id: 'prod-102', barcode: '8991000000102', name: 'Indomie Kuah Rasa Ayam Bawang 75g', category: 'Mie & Makanan Instan', sellPrice: 3400, stock: 150, image: '🍜' },

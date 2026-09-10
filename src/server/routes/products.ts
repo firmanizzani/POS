@@ -65,7 +65,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       ]
     };
   })
-  .post('/', ({ body }) => {
+  .post('/', ({ body }: { body: any }) => {
     return { success: true, message: 'Produk berhasil ditambahkan', data: body };
   }, {
     body: t.Object({

@@ -4,8 +4,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import * as schema from './schema.js';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-dotenv.config({ path: path.resolve(process.cwd(), 'apps/backend/.env') });
 dotenv.config();
 
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/pos_minimarket';
