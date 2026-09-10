@@ -436,6 +436,27 @@
             <span class="text-emerald-600 font-bold text-lg">{formatRp(changeAmount)}</span>
           </div>
         </div>
+      {:else if paymentMethod === 'QRIS'}
+        <!-- Dynamic QRIS QR Code Display -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-center flex flex-col items-center justify-center space-y-3">
+          <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=00020101021126580014ID.GO.QRIS.WWW01189360091100000000005204581253033605802ID5913POS%20MINIMARKET6007JAKARTA6304ABCD"
+              alt="QRIS Code"
+              class="w-44 h-44 object-contain"
+            />
+          </div>
+          <div>
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Scan QRIS Semua Pembayaran</span>
+            <p class="text-[11px] text-slate-500 mt-0.5">Gopay, OVO, ShopeePay, DANA, BCA Mobile, Mandiri LIVIN, dll.</p>
+          </div>
+        </div>
+      {:else if paymentMethod === 'DEBIT'}
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center space-y-2">
+          <CreditCard class="w-10 h-10 text-sky-600 mx-auto" />
+          <p class="text-xs font-bold text-slate-700">Gesek / Dip Kartu pada Mesin EDC</p>
+          <p class="text-[11px] text-slate-500">BCA, Mandiri, BRI, BNI, dll.</p>
+        </div>
       {/if}
 
       <button
