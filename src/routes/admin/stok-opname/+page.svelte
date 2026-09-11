@@ -1,36 +1,57 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { ClipboardCheck, Plus, X } from 'lucide-svelte';
 
-  let adjustments = [
-    { id: 'adj-1', productName: 'Aqua Air Mineral 600ml', reason: 'EXPIRED', qtyDiff: -5, adjustedBy: 'Admin Budi', date: '2026-09-09' },
-    { id: 'adj-2', productName: 'Chitato Sapi Panggang 68g', reason: 'DAMAGED', qtyDiff: -2, adjustedBy: 'Admin Budi', date: '2026-09-10' }
-  ];
-
+  let adjustments: any[] = [];
   let showModal = false;
+  let isSaving = false;
   let form = {
     productName: '',
     reason: 'DAMAGED',
     qtyDiff: -1
   };
 
-  function createAdjustment() {
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/stock-adjustments').then(r => r.json());
+      if (res?.success && Array.isArray(res.data)) {
+        adjustments = res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load stock adjustments from API', e);
+    }
+  });
+
+  async function createAdjustment() {
     if (!form.productName) {
       alert('Nama produk wajib diisi!');
       return;
     }
-    adjustments = [
-      {
-        id: `adj-${Date.now()}`,
-        productName: form.productName,
-        reason: form.reason,
-        qtyDiff: form.qtyDiff,
-        adjustedBy: 'Admin',
-        date: new Date().toISOString().slice(0, 10)
-      },
-      ...adjustments
-    ];
-    showModal = false;
-    form = { productName: '', reason: 'DAMAGED', qtyDiff: -1 };
+
+    isSaving = true;
+    try {
+      const res = await fetch('/api/stock-adjustments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: form.productName,
+          reason: form.reason,
+          qtyDiff: Number(form.qtyDiff)
+        })
+      }).then(r => r.json());
+
+      if (res?.success && res.data) {
+        adjustments = [res.data, ...adjustments];
+        showModal = false;
+        form = { productName: '', reason: 'DAMAGED', qtyDiff: -1 };
+      } else {
+        alert('Gagal menyimpan penyesuaian: ' + (res?.message || 'Unknown error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isSaving = false;
+    }
   }
 </script>
 
@@ -109,8 +130,8 @@
         </div>
       </div>
 
-      <button on:click={createAdjustment} class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
-        SIMPAN STOK OPNAME
+      <button on:click={createAdjustment} disabled={isSaving} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
+        {isSaving ? 'MENYIMPAN...' : 'SIMPAN STOK OPNAME'}
       </button>
     </div>
   </div>

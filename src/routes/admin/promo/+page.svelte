@@ -1,12 +1,10 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { Plus, Tag, X } from 'lucide-svelte';
 
-  let promos = [
-    { code: 'PROMO-JUMAT', title: 'Diskon Jumat Berkah 10%', type: 'PERCENTAGE', value: '10%', minPurchase: 50000, status: 'ACTIVE' },
-    { code: 'POTONGAN5K', title: 'Potongan Langsung 5 Ribu', type: 'FIXED', value: 'Rp 5.000', minPurchase: 75000, status: 'ACTIVE' }
-  ];
-
+  let promos: any[] = [];
   let showModal = false;
+  let isSaving = false;
   let form = {
     code: '',
     title: '',
@@ -14,24 +12,48 @@
     minPurchase: 0
   };
 
-  function createPromo() {
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/promos').then(r => r.json());
+      if (res?.success && Array.isArray(res.data)) {
+        promos = res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load promos from API', e);
+    }
+  });
+
+  async function createPromo() {
     if (!form.code || !form.title || !form.value) {
       alert('Semua kolom wajib diisi!');
       return;
     }
-    promos = [
-      {
-        code: form.code.toUpperCase(),
-        title: form.title,
-        type: 'PERCENTAGE',
-        value: form.value,
-        minPurchase: form.minPurchase,
-        status: 'ACTIVE'
-      },
-      ...promos
-    ];
-    showModal = false;
-    form = { code: '', title: '', value: '', minPurchase: 0 };
+
+    isSaving = true;
+    try {
+      const res = await fetch('/api/promos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: form.code,
+          title: form.title,
+          value: form.value,
+          minPurchase: Number(form.minPurchase)
+        })
+      }).then(r => r.json());
+
+      if (res?.success && res.data) {
+        promos = [res.data, ...promos];
+        showModal = false;
+        form = { code: '', title: '', value: '', minPurchase: 0 };
+      } else {
+        alert('Gagal membuat promo: ' + (res?.message || 'Unknown error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isSaving = false;
+    }
   }
 
   function formatRp(val: number) {
@@ -112,8 +134,8 @@
         </div>
       </div>
 
-      <button on:click={createPromo} class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
-        SIMPAN PROMO
+      <button on:click={createPromo} disabled={isSaving} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
+        {isSaving ? 'MENYIMPAN...' : 'SIMPAN PROMO'}
       </button>
     </div>
   </div>

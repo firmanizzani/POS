@@ -1,34 +1,55 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { Plus, Phone, X } from 'lucide-svelte';
 
-  let members = [
-    { code: 'MBR-001', name: 'Siti Rahma', phone: '081298765432', points: 450, tier: 'GOLD' },
-    { code: 'MBR-002', name: 'Dedi Kurniawan', phone: '085712345678', points: 120, tier: 'SILVER' }
-  ];
-
+  let members: any[] = [];
   let showModal = false;
+  let isSaving = false;
   let form = {
     name: '',
     phone: ''
   };
 
-  function createMember() {
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/members').then(r => r.json());
+      if (res?.success && Array.isArray(res.data)) {
+        members = res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load members from API', e);
+    }
+  });
+
+  async function createMember() {
     if (!form.name || !form.phone) {
       alert('Nama & No. HP wajib diisi!');
       return;
     }
-    members = [
-      {
-        code: `MBR-00${members.length + 1}`,
-        name: form.name,
-        phone: form.phone,
-        points: 0,
-        tier: 'BRONZE'
-      },
-      ...members
-    ];
-    showModal = false;
-    form = { name: '', phone: '' };
+
+    isSaving = true;
+    try {
+      const res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone
+        })
+      }).then(r => r.json());
+
+      if (res?.success && res.data) {
+        members = [res.data, ...members];
+        showModal = false;
+        form = { name: '', phone: '' };
+      } else {
+        alert('Gagal mendaftarkan member: ' + (res?.message || 'Unknown error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isSaving = false;
+    }
   }
 </script>
 
@@ -97,8 +118,8 @@
         </div>
       </div>
 
-      <button on:click={createMember} class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
-        DAFTARKAN MEMBER
+      <button on:click={createMember} disabled={isSaving} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
+        {isSaving ? 'MENDAFTARKAN...' : 'DAFTARKAN MEMBER'}
       </button>
     </div>
   </div>

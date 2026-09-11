@@ -1,60 +1,23 @@
 <script lang="ts">
-  import { FileText, Search, Printer, Download, Eye, Calendar, DollarSign, Filter, X } from 'lucide-svelte';
+  import { onMount } from 'svelte';
+  import { FileText, Search, Printer, Download, Eye, Filter, X } from 'lucide-svelte';
 
-  let transactions = [
-    {
-      invoiceNumber: 'INV-20260910-001',
-      date: '2026-09-10 19:42',
-      cashierName: 'Ahmad Kasir',
-      itemsCount: 3,
-      subtotal: 10500,
-      discount: 0,
-      grandTotal: 10500,
-      paidAmount: 20000,
-      changeAmount: 9500,
-      paymentMethod: 'CASH',
-      items: [
-        { name: 'Indomie Goreng Spesial 85g', qty: 2, price: 3500 },
-        { name: 'Le Minerale 600ml', qty: 1, price: 3500 }
-      ]
-    },
-    {
-      invoiceNumber: 'INV-20260910-002',
-      date: '2026-09-10 18:15',
-      cashierName: 'Ahmad Kasir',
-      itemsCount: 2,
-      subtotal: 31500,
-      discount: 3150,
-      grandTotal: 28350,
-      paidAmount: 28350,
-      changeAmount: 0,
-      paymentMethod: 'QRIS',
-      items: [
-        { name: 'Chitato Sapi Panggang 68g', qty: 1, price: 11500 },
-        { name: 'Ultra Milk Full Cream 1000ml', qty: 1, price: 20000 }
-      ]
-    },
-    {
-      invoiceNumber: 'INV-20260909-088',
-      date: '2026-09-09 14:20',
-      cashierName: 'Budi (Admin)',
-      itemsCount: 1,
-      subtotal: 24000,
-      discount: 0,
-      grandTotal: 24000,
-      paidAmount: 50000,
-      changeAmount: 26000,
-      paymentMethod: 'CASH',
-      items: [
-        { name: 'Rinso Anti Noda Deterjen Powder 770g', qty: 1, price: 24000 }
-      ]
-    }
-  ];
-
+  let transactions: any[] = [];
   let searchQuery = '';
   let selectedMethod = 'ALL';
   let selectedTrx: any = null;
   let showDetailModal = false;
+
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/transactions').then(r => r.json());
+      if (res?.success && Array.isArray(res.data)) {
+        transactions = res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load transactions from API', e);
+    }
+  });
 
   $: filteredTransactions = transactions.filter((t) => {
     const matchQuery = t.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) || t.cashierName.toLowerCase().includes(searchQuery.toLowerCase());

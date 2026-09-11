@@ -1,35 +1,57 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { Truck, Plus, FileText, CheckCircle, Clock, X } from 'lucide-svelte';
 
-  let purchaseOrders = [
-    { poNumber: 'PO-202609-001', supplierName: 'PT Indofood Sukses Makmur', totalAmount: 4500000, status: 'RECEIVED', date: '2026-09-08' },
-    { poNumber: 'PO-202609-002', supplierName: 'PT Mayora Indah Tbk', totalAmount: 2800000, status: 'PENDING', date: '2026-09-10' }
-  ];
-
+  let purchaseOrders: any[] = [];
   let showModal = false;
+  let isSaving = false;
   let form = {
     supplierName: '',
     totalAmount: 0,
     notes: ''
   };
 
-  function createPO() {
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/suppliers/po').then(r => r.json());
+      if (res?.success && Array.isArray(res.data)) {
+        purchaseOrders = res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load purchase orders from API', e);
+    }
+  });
+
+  async function createPO() {
     if (!form.supplierName || form.totalAmount <= 0) {
       alert('Nama Supplier & Total Tagihan wajib diisi!');
       return;
     }
-    purchaseOrders = [
-      {
-        poNumber: `PO-202609-00${purchaseOrders.length + 1}`,
-        supplierName: form.supplierName,
-        totalAmount: form.totalAmount,
-        status: 'PENDING',
-        date: new Date().toISOString().slice(0, 10)
-      },
-      ...purchaseOrders
-    ];
-    showModal = false;
-    form = { supplierName: '', totalAmount: 0, notes: '' };
+
+    isSaving = true;
+    try {
+      const res = await fetch('/api/suppliers/po', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierName: form.supplierName,
+          totalAmount: Number(form.totalAmount),
+          notes: form.notes
+        })
+      }).then(r => r.json());
+
+      if (res?.success && res.data) {
+        purchaseOrders = [res.data, ...purchaseOrders];
+        showModal = false;
+        form = { supplierName: '', totalAmount: 0, notes: '' };
+      } else {
+        alert('Gagal menyimpan PO: ' + (res?.message || 'Unknown error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isSaving = false;
+    }
   }
 
   function formatRp(val: number) {
@@ -113,8 +135,8 @@
         </div>
       </div>
 
-      <button on:click={createPO} class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
-        SIMPAN PO
+      <button on:click={createPO} disabled={isSaving} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
+        {isSaving ? 'MENYIMPAN...' : 'SIMPAN PO'}
       </button>
     </div>
   </div>

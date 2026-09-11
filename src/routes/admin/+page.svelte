@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import {
     TrendingUp,
     DollarSign,
@@ -9,7 +10,7 @@
     Download
   } from 'lucide-svelte';
 
-  const analytics = {
+  let analytics = {
     totalOmset: 15450000,
     netProfit: 3820000,
     totalTransactions: 248,
@@ -25,6 +26,17 @@
       { name: 'Rexona Roll On Women 45ml', stock: 3, minAlert: 5, category: 'Sabun & Perawatan' }
     ]
   };
+
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/analytics/dashboard').then(r => r.json());
+      if (res?.success && res.data) {
+        analytics = { ...analytics, ...res.data };
+      }
+    } catch (e) {
+      console.warn('Failed to load dashboard analytics from API', e);
+    }
+  });
 
   function formatRp(val: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);

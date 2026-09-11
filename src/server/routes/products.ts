@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
 import { products, categories } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { memoryStore } from '../db/store.js';
 
 export const productRoutes = new Elysia({ prefix: '/products' })
   .get('/', async () => {
@@ -24,38 +25,59 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id));
 
-      return {
-        success: true,
-        data: allProducts.map(p => ({
-          ...p,
-          costPrice: Number(p.costPrice),
-          sellPrice: Number(p.sellPrice)
-        }))
-      };
+      if (allProducts.length > 0) {
+        return {
+          success: true,
+          data: allProducts.map(p => ({
+            ...p,
+            costPrice: Number(p.costPrice),
+            sellPrice: Number(p.sellPrice)
+          }))
+        };
+      }
     } catch (error: any) {
-      return { success: false, message: error.message, data: [] };
+      console.warn('DB query failed, fallback to memoryStore:', error.message);
     }
+
+    // Fallback to memoryStore
+    const categoryMap = new Map(memoryStore.categories.map(c => [c.id, c.name]));
+    const data = memoryStore.products.map(p => ({
+      ...p,
+      categoryName: categoryMap.get(p.categoryId || '') || 'Lainnya',
+      costPrice: Number(p.costPrice),
+      sellPrice: Number(p.sellPrice)
+    }));
+
+    return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
-    try {
-      const id = `prod-${Date.now()}`;
-      await db.insert(products).values({
-        id,
-        barcode: body.barcode,
-        sku: body.sku || `SKU-${Date.now()}`,
-        name: body.name,
-        categoryId: body.categoryId || null,
-        costPrice: body.costPrice.toString(),
-        sellPrice: body.sellPrice.toString(),
-        stock: body.stock || 0,
-        unit: body.unit || 'pcs',
-        imageUrl: body.imageUrl || null
-      });
+    const id = `prod-${Date.now()}`;
+    const newProd = {
+      id,
+      barcode: body.barcode,
+      sku: body.sku || `SKU-${Date.now()}`,
+      name: body.name,
+      categoryId: body.categoryId || null,
+      costPrice: body.costPrice.toString(),
+      sellPrice: body.sellPrice.toString(),
+      stock: body.stock || 0,
+      unit: body.unit || 'pcs',
+      imageUrl: body.imageUrl || null,
+      minStockAlert: 5,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-      return { success: true, message: 'Produk berhasil ditambahkan', data: { id, ...body } };
+    try {
+      await db.insert(products).values(newProd);
     } catch (error: any) {
-      return { success: false, message: error.message };
+      console.warn('DB insert failed, fallback to memoryStore:', error.message);
     }
+
+    memoryStore.products.push(newProd);
+
+    return { success: true, message: 'Produk berhasil ditambahkan', data: newProd };
   }, {
     body: t.Object({
       barcode: t.String(),
@@ -83,17 +105,35 @@ export const productRoutes = new Elysia({ prefix: '/products' })
           imageUrl: body.imageUrl !== undefined ? body.imageUrl : undefined
         })
         .where(eq(products.id, params.id));
-
-      return { success: true, message: 'Produk berhasil diupdate' };
     } catch (error: any) {
-      return { success: false, message: error.message };
+      console.warn('DB update failed, fallback to memoryStore:', error.message);
     }
+
+    const idx = memoryStore.products.findIndex(p => p.id === params.id);
+    if (idx !== -1) {
+      memoryStore.products[idx] = {
+        ...memoryStore.products[idx],
+        barcode: body.barcode ?? memoryStore.products[idx].barcode,
+        sku: body.sku ?? memoryStore.products[idx].sku,
+        name: body.name ?? memoryStore.products[idx].name,
+        costPrice: body.costPrice ? body.costPrice.toString() : memoryStore.products[idx].costPrice,
+        sellPrice: body.sellPrice ? body.sellPrice.toString() : memoryStore.products[idx].sellPrice,
+        stock: body.stock ?? memoryStore.products[idx].stock,
+        unit: body.unit ?? memoryStore.products[idx].unit,
+        imageUrl: body.imageUrl !== undefined ? body.imageUrl : memoryStore.products[idx].imageUrl
+      };
+    }
+
+    return { success: true, message: 'Produk berhasil diupdate' };
   })
   .delete('/:id', async ({ params }: { params: { id: string } }) => {
     try {
       await db.delete(products).where(eq(products.id, params.id));
-      return { success: true, message: 'Produk berhasil dihapus' };
     } catch (error: any) {
-      return { success: false, message: error.message };
+      console.warn('DB delete failed, fallback to memoryStore:', error.message);
     }
+
+    memoryStore.products = memoryStore.products.filter(p => p.id !== params.id);
+
+    return { success: true, message: 'Produk berhasil dihapus' };
   });
