@@ -54,6 +54,24 @@
     }
   }
 
+  async function updateStatus(id: string, status: string) {
+    try {
+      const res = await fetch(`/api/suppliers/po/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      }).then(r => r.json());
+
+      if (res?.success) {
+        purchaseOrders = purchaseOrders.map(p => p.id === id ? { ...p, status } : p);
+      } else {
+        alert('Gagal mengedit status: ' + (res?.message || 'Error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    }
+  }
+
   function formatRp(val: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   }
@@ -87,6 +105,7 @@
           <th class="p-3">Tanggal</th>
           <th class="p-3 text-right">Total Tagihan</th>
           <th class="p-3 text-center">Status</th>
+          <th class="p-3 text-center">Aksi</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100">
@@ -107,6 +126,17 @@
                   <Clock class="w-3 h-3" />
                   <span>PENDING</span>
                 </span>
+              {/if}
+            </td>
+            <td class="p-3 text-center">
+              {#if po.status === 'PENDING'}
+                <button on:click={() => updateStatus(po.id, 'RECEIVED')} class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] transition shadow-sm">
+                  Tandai Diterima
+                </button>
+              {:else}
+                <button on:click={() => updateStatus(po.id, 'PENDING')} class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-medium transition">
+                  Ubah ke Pending
+                </button>
               {/if}
             </td>
           </tr>

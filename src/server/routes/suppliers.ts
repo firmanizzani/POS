@@ -104,4 +104,30 @@ export const supplierRoutes = new Elysia({ prefix: '/suppliers' })
       notes: t.Optional(t.String()),
       items: t.Optional(t.Array(t.Any()))
     })
+  })
+  .patch('/po/:id/status', async ({ params, body }: { params: { id: string }, body: { status: string } }) => {
+    const { id } = params;
+    const { status } = body;
+
+    const targetPo = memoryStore.purchaseOrders.find(p => p.id === id);
+    if (targetPo) {
+      targetPo.status = status;
+    }
+
+    try {
+      await db.update(purchaseOrders)
+        .set({ status })
+        .where(eq(purchaseOrders.id, id));
+    } catch (e: any) {
+      console.warn('DB update PO status error:', e.message);
+    }
+
+    return {
+      success: true,
+      message: 'Status PO berhasil diperbarui',
+      data: { id, status }
+    };
+  }, {
+    params: t.Object({ id: t.String() }),
+    body: t.Object({ status: t.String() })
   });
