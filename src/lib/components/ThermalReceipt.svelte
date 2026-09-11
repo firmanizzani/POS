@@ -6,6 +6,7 @@
   export let cashierName = "Ahmad Kasir";
   export let memberName = "";
   export let earnedPoints = 0;
+  export let promoCode = "";
   export let items: any[] = [];
   export let subtotal = 0;
   export let discount = 0;
@@ -69,7 +70,7 @@
     </div>
     {#if discount > 0}
       <div class="flex justify-between text-red-600">
-        <span>Diskon</span>
+        <span>Diskon{promoCode ? ` (${promoCode})` : ''}</span>
         <span>-{formatRp(discount)}</span>
       </div>
     {/if}

@@ -294,21 +294,50 @@
     paidAmount = amount;
   }
 
-  function processPayment() {
+  async function processPayment() {
     if (paidAmount < $grandTotal) {
       alert('Jumlah pembayaran kurang dari total belanja!');
       return;
     }
 
-    if (selectedMember) {
-      selectedMember.points += earnedPoints;
+    const trxEarnedPoints = selectedMember ? earnedPoints : 0;
+
+    // Kirim ke API untuk disimpan ke memoryStore / DB
+    try {
+      await fetch('/api/cashier/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shiftId: $shiftStore.shiftId || 'shift-1001',
+          cashierId: 'user-kasir-1',
+          memberId: selectedMember?.id || null,
+          promoCode: $appliedPromo?.code || null,
+          items: $cartItems.map(i => ({
+            id: i.id,
+            name: i.name,
+            sellPrice: i.sellPrice,
+            quantity: i.quantity,
+            subtotal: i.sellPrice * i.quantity
+          })),
+          subtotal: $subtotal,
+          discountTotal: $discountTotal,
+          grandTotal: $grandTotal,
+          paidAmount: paidAmount,
+          paymentMethod: paymentMethod,
+          earnedPoints: trxEarnedPoints
+        })
+      });
+    } catch (e) {
+      console.warn('Gagal simpan transaksi ke API:', e);
     }
 
     lastCompletedTransaction = {
       invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
       cashierName: $shiftStore.cashierName,
       memberName: selectedMember ? `${selectedMember.name} (${selectedMember.code})` : undefined,
-      earnedPoints: selectedMember ? earnedPoints : 0,
+      earnedPoints: trxEarnedPoints,
+      promoCode: $appliedPromo?.code,
+      promoTitle: $appliedPromo?.title,
       items: [...$cartItems],
       subtotal: $subtotal,
       discount: $discountTotal,
@@ -324,6 +353,7 @@
     clearCart();
     paidAmount = 0;
     selectedMemberId = '';
+    removePromo();
   }
 
   function printReceipt() {
@@ -721,6 +751,7 @@
           cashierName={lastCompletedTransaction.cashierName}
           memberName={lastCompletedTransaction.memberName}
           earnedPoints={lastCompletedTransaction.earnedPoints}
+          promoCode={lastCompletedTransaction.promoCode}
           items={lastCompletedTransaction.items}
           subtotal={lastCompletedTransaction.subtotal}
           discount={lastCompletedTransaction.discount}

@@ -212,7 +212,8 @@
             <th class="p-3.5">No. Invoice</th>
             <th class="p-3.5">Waktu Transaksi</th>
             <th class="p-3.5">Kasir</th>
-            <th class="p-3.5 text-center">Jumlah Item</th>
+            <th class="p-3.5">Member</th>
+            <th class="p-3.5 text-center">Promo</th>
             <th class="p-3.5 text-center">Metode</th>
             <th class="p-3.5 text-right">Total Belanja</th>
             <th class="p-3.5 text-center">Aksi</th>
@@ -227,13 +228,33 @@
               </td>
               <td class="p-3.5 text-slate-500 font-mono">{t.date}</td>
               <td class="p-3.5 font-semibold text-slate-900">{t.cashierName}</td>
-              <td class="p-3.5 text-center font-bold font-mono">{t.itemsCount} item</td>
+              <td class="p-3.5 font-medium text-slate-700">
+                {#if t.memberName}
+                  <span class="text-sky-700 font-bold">{t.memberName}</span>
+                {:else}
+                  <span class="text-slate-400 font-normal">-</span>
+                {/if}
+              </td>
+              <td class="p-3.5 text-center">
+                {#if t.promoCode}
+                  <span class="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 font-mono font-bold text-[10px] rounded-full">
+                    🏷️ {t.promoCode}
+                  </span>
+                {:else}
+                  <span class="text-slate-400 font-normal">-</span>
+                {/if}
+              </td>
               <td class="p-3.5 text-center">
                 <span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] {t.paymentMethod === 'QRIS' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
                   {t.paymentMethod}
                 </span>
               </td>
-              <td class="p-3.5 text-right font-mono font-black text-slate-900">{formatRp(t.grandTotal)}</td>
+              <td class="p-3.5 text-right font-mono font-black text-slate-900">
+                {formatRp(t.grandTotal)}
+                {#if t.discount > 0}
+                  <div class="text-[10px] text-amber-600 font-semibold">Diskon -{formatRp(t.discount)}</div>
+                {/if}
+              </td>
               <td class="p-3.5 text-center space-x-1.5">
                 <button
                   on:click={() => {
