@@ -55,14 +55,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
     const newProd = {
       id,
       barcode: body.barcode,
-      sku: body.sku || (() => {
-        if (!body.name) return `SKU-${Date.now()}`;
-        const clean = body.name.toUpperCase().replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '').replace(/[^A-Z0-9\s]/g, '').trim().split(/\s+/).join('-');
-        if (clean.length <= 20) return clean;
-        const truncated = clean.slice(0, 20);
-        const lastDash = truncated.lastIndexOf('-');
-        return (lastDash > 0 ? truncated.slice(0, lastDash) : truncated) || `SKU-${Date.now()}`;
-      })(),
+      sku: (body.sku ? body.sku.toUpperCase() : (body.name ? body.name.toUpperCase().replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '').replace(/[^A-Z0-9\s]/g, '').trim().split(/\s+/).join('-') : `SKU-${Date.now()}`)).slice(0, 20),
       name: body.name,
       categoryId: body.categoryId || null,
       costPrice: (body.costPrice ?? 0).toString(),

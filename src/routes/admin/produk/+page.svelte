@@ -70,21 +70,14 @@
 
   function generateSku() {
     if (isSkuTouched) return;
-    const clean = form.name
+    form.sku = form.name
       .toUpperCase()
       .replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '')
       .replace(/[^A-Z0-9\s]/g, '')
       .trim()
       .split(/\s+/)
-      .join('-');
-    
-    if (clean.length <= 20) {
-      form.sku = clean;
-    } else {
-      const truncated = clean.slice(0, 20);
-      const lastDash = truncated.lastIndexOf('-');
-      form.sku = lastDash > 0 ? truncated.slice(0, lastDash) : truncated;
-    }
+      .join('-')
+      .slice(0, 20);
   }
 
   function handleNameInput() {
@@ -148,24 +141,16 @@
       return;
     }
 
-    let finalSku = form.sku ? form.sku.toUpperCase() : '';
-    if (!finalSku) {
-      const clean = form.name
+    const finalSku = form.sku ? form.sku.toUpperCase().slice(0, 20) : (
+      form.name
         .toUpperCase()
         .replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '')
         .replace(/[^A-Z0-9\s]/g, '')
         .trim()
         .split(/\s+/)
-        .join('-');
-      if (clean.length <= 20) {
-        finalSku = clean;
-      } else {
-        const truncated = clean.slice(0, 20);
-        const lastDash = truncated.lastIndexOf('-');
-        finalSku = lastDash > 0 ? truncated.slice(0, lastDash) : truncated;
-      }
-      if (!finalSku) finalSku = `SKU-${Date.now()}`;
-    }
+        .join('-')
+        .slice(0, 20) || `SKU-${Date.now()}`
+    );
 
     isSaving = true;
     try {

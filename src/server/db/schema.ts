@@ -52,7 +52,7 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
 export const products = pgTable('products', {
   id: text('id').primaryKey(),
   barcode: varchar('barcode', { length: 100 }).notNull().unique(),
-  sku: varchar('sku', { length: 50 }).notNull().unique(),
+  sku: varchar('sku', { length: 20 }).notNull().unique(),
   name: text('name').notNull(),
   categoryId: text('category_id').references(() => categories.id),
   costPrice: numeric('cost_price', { precision: 12, scale: 2 }).notNull(),
