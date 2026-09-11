@@ -42,38 +42,45 @@
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   }
 
-  function exportDashboardReport() {
+  async function exportDashboardReport() {
+    const XLSX = await import('xlsx');
     const today = new Date().toISOString().slice(0, 10);
-    const rows = [
-      ['sep=;'],
+
+    const rows: (string | number)[][] = [
       ['LAPORAN RINGKASAN DASHBOARD MINIMARKET'],
       [`Tanggal Ekspor: ${today}`],
-      [''],
+      [],
       ['METRIK UTAMA'],
-      ['Metrik', 'Nilai (Rp / Qty)'],
-      ['Total Omset (Gross)', formatRp(analytics.totalOmset)],
-      ['Profit Bersih (Net)', formatRp(analytics.netProfit)],
-      ['Total Transaksi', `${analytics.totalTransactions} transaksi`],
-      ['Rata-rata Basket Size', formatRp(analytics.averageOrderValue)],
-      [''],
+      ['Metrik', 'Nilai'],
+      ['Total Omset (Gross)', analytics.totalOmset],
+      ['Profit Bersih (Net)', analytics.netProfit],
+      ['Total Transaksi', analytics.totalTransactions],
+      ['Rata-rata Basket Size', analytics.averageOrderValue],
+      [],
       ['TOP SELLING PRODUCTS (PRODUK TERLARIS)'],
       ['Nama Produk', 'Kategori', 'Jumlah Terjual (pcs)', 'Total Pendapatan (Rp)'],
-      ...analytics.topProducts.map(tp => [tp.name, tp.category, `${tp.soldQty} pcs`, formatRp(tp.revenue)]),
-      [''],
+      ...analytics.topProducts.map(tp => [tp.name, tp.category, tp.soldQty, tp.revenue]),
+      [],
       ['PERINGATAN STOK MENIPIS'],
       ['Nama Produk', 'Kategori', 'Sisa Stok (pcs)', 'Batas Alert Limit (pcs)'],
-      ...analytics.lowStockAlerts.map(ls => [ls.name, ls.category, `${ls.stock} pcs`, `${ls.minAlert} pcs`])
+      ...analytics.lowStockAlerts.map(ls => [ls.name, ls.category, ls.stock, ls.minAlert])
     ];
 
-    const csvContent = '\uFEFF' + rows.map(e => e.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Analitik_Minimarket_${today}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Hitung lebar kolom otomatis berdasarkan konten terpanjang
+    const colWidths: number[] = [];
+    rows.forEach(row => {
+      row.forEach((cell, colIdx) => {
+        const len = String(cell ?? '').length;
+        colWidths[colIdx] = Math.max(colWidths[colIdx] ?? 10, len + 2);
+      });
+    });
+    ws['!cols'] = colWidths.map(w => ({ wch: Math.min(w, 50) }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Dashboard Analitik');
+    XLSX.writeFile(wb, `Laporan_Analitik_Minimarket_${today}.xlsx`);
   }
 </script>
 

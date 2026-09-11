@@ -29,7 +29,8 @@
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   }
 
-  function exportAllTransactionsCSV() {
+  async function exportAllTransactionsXLSX() {
+    const XLSX = await import('xlsx');
     const today = new Date().toISOString().slice(0, 10);
     const headers = [
       'No. Invoice',
@@ -37,11 +38,11 @@
       'Kasir',
       'Jumlah Item',
       'Metode Pembayaran',
-      'Subtotal',
-      'Diskon',
-      'Grand Total',
-      'Dibayar',
-      'Kembalian',
+      'Subtotal (Rp)',
+      'Diskon (Rp)',
+      'Grand Total (Rp)',
+      'Dibayar (Rp)',
+      'Kembalian (Rp)',
       'Rincian Barang Belanjaan'
     ];
 
@@ -49,35 +50,40 @@
       t.invoiceNumber,
       t.date,
       t.cashierName,
-      `${t.itemsCount} item`,
+      t.itemsCount,
       t.paymentMethod,
-      formatRp(t.subtotal || t.grandTotal),
-      formatRp(t.discount || 0),
-      formatRp(t.grandTotal),
-      formatRp(t.paidAmount),
-      formatRp(t.changeAmount),
-      (t.items || []).map((i: any) => `${i.name} (${i.qty}x @ ${formatRp(i.price)})`).join(' | ')
+      t.subtotal || t.grandTotal,
+      t.discount || 0,
+      t.grandTotal,
+      t.paidAmount,
+      t.changeAmount,
+      (t.items || []).map((i: any) => `${i.name} (${i.qty}x @ Rp${i.price.toLocaleString('id-ID')})`).join(' | ')
     ]);
 
     const rows = [
-      ['sep=;'],
       ['LAPORAN RIWAYAT TRANSAKSI PENJUALAN MINIMARKET'],
       [`Tanggal Ekspor: ${today}`],
       [`Total Transaksi Terfilter: ${filteredTransactions.length}`],
-      [''],
+      [],
       headers,
       ...dataRows
     ];
 
-    const csvContent = '\uFEFF' + rows.map(e => e.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Transaksi_Penjualan_${today}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Hitung lebar kolom otomatis berdasarkan konten terpanjang
+    const colWidths: number[] = [];
+    rows.forEach(row => {
+      row.forEach((cell: any, colIdx: number) => {
+        const len = String(cell ?? '').length;
+        colWidths[colIdx] = Math.max(colWidths[colIdx] ?? 10, len + 2);
+      });
+    });
+    ws['!cols'] = colWidths.map(w => ({ wch: Math.min(w, 60) }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Riwayat Transaksi');
+    XLSX.writeFile(wb, `Laporan_Transaksi_Penjualan_${today}.xlsx`);
   }
 
   function printDigitalReceipt(trx: any) {
@@ -137,9 +143,9 @@
       <p class="text-xs text-slate-500 mt-1">Daftar lengkap struk penjualan, metode pembayaran, dan cetak ulang struk digital</p>
     </div>
 
-    <button on:click={exportAllTransactionsCSV} class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
+    <button on:click={exportAllTransactionsXLSX} class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
       <Download class="w-4 h-4 text-sky-600" />
-      <span>EXPORT ALL TRANSACTIONS (EXCEL/CSV)</span>
+      <span>EXPORT ALL TRANSACTIONS (.XLSX)</span>
     </button>
   </div>
 
