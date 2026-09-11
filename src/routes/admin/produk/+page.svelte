@@ -48,9 +48,18 @@
 
   $: filtered = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.barcode.includes(searchQuery));
 
+  let isSkuTouched = false;
+
+  function handleNameInput() {
+    if (!editingId && !isSkuTouched) {
+      form.sku = form.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 20);
+    }
+  }
+
   function openCreateModal() {
     editingId = null;
     uploadError = '';
+    isSkuTouched = false;
     form = { barcode: `899${Math.floor(100000000 + Math.random() * 900000000)}`, sku: '', name: '', category: 'Mie & Makanan Instan', costPrice: 0, sellPrice: 0, stock: 0, unit: 'pcs', imageUrl: '' };
     showModal = true;
   }
@@ -268,12 +277,12 @@
           </div>
           <div>
             <label class="text-slate-600 font-bold">Kode SKU (Opsional)</label>
-            <input type="text" bind:value={form.sku} placeholder="Otomatis jika kosong" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono uppercase" />
+            <input type="text" bind:value={form.sku} on:input={() => isSkuTouched = true} placeholder="Otomatis dari nama produk" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono uppercase" />
           </div>
         </div>
         <div>
           <label class="text-slate-600 font-bold">Nama Produk</label>
-          <input type="text" bind:value={form.name} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
+          <input type="text" bind:value={form.name} on:input={handleNameInput} placeholder="Contoh: Indomie Goreng Spesial 85g" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
