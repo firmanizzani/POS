@@ -4,13 +4,6 @@
   import { authStore } from '$lib/stores/authStore';
   import { Store, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-svelte';
 
-  // Demo accounts for development. Replace with real DB queries in production.
-  const DEMO_ACCOUNTS = [
-    { id: 'user-admin-1', name: 'Super Admin', email: 'admin@minimarket.com', pinCode: '123456', role: 'admin' as const },
-    { id: 'user-kasir-1', name: 'Ahmad Kasir', email: 'ahmad@minimarket.com', pinCode: '111111', role: 'cashier' as const },
-    { id: 'user-kasir-2', name: 'Budi Kasir', email: 'budi@minimarket.com', pinCode: '222222', role: 'cashier' as const },
-  ];
-
   let email = '';
   let pinCode = '';
   let showPin = false;
@@ -38,30 +31,35 @@
     }
 
     isLoading = true;
-    await new Promise((r) => setTimeout(r, 600)); // Simulate network
 
-    const account = DEMO_ACCOUNTS.find((a) => a.email === email && a.pinCode === pinCode);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, pinCode })
+      }).then((r) => r.json());
 
-    if (!account) {
-      errorMsg = 'Email atau PIN salah. Silakan coba lagi.';
+      if (res?.success && res.user) {
+        authStore.login({
+          id: res.user.id,
+          name: res.user.name,
+          email: res.user.email,
+          role: res.user.role,
+          token: res.token || `token-${Date.now()}`
+        });
+
+        if (res.user.role === 'admin') {
+          goto('/admin');
+        } else {
+          goto('/kasir');
+        }
+      } else {
+        errorMsg = res?.message || 'Email atau PIN salah. Silakan coba lagi.';
+      }
+    } catch (e: any) {
+      errorMsg = 'Gagal terhubung ke server: ' + e.message;
+    } finally {
       isLoading = false;
-      return;
-    }
-
-    authStore.login({
-      id: account.id,
-      name: account.name,
-      email: account.email,
-      role: account.role,
-      token: `demo-token-${Date.now()}`
-    });
-
-    isLoading = false;
-
-    if (account.role === 'admin') {
-      goto('/admin');
-    } else {
-      goto('/kasir');
     }
   }
 </script>
@@ -83,8 +81,6 @@
         <p class="text-sky-200 text-sm font-medium">Sistem Kasir Professional</p>
       </div>
     </div>
-
-
 
     <!-- Footer -->
     <div class="relative z-10">
@@ -114,7 +110,6 @@
 
       <!-- Login Form -->
       <form on:submit|preventDefault={handleLogin} class="space-y-5">
-
         <!-- Email Field -->
         <div class="space-y-1.5">
           <label for="email" class="text-xs font-bold text-slate-700 uppercase tracking-wider">Email Akun</label>
