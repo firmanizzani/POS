@@ -1,46 +1,88 @@
 import { Elysia, t } from 'elysia';
+import { memoryStore } from '../db/store.js';
 
 export const cashierRoutes = new Elysia({ prefix: '/cashier' })
-  // Shift Management: Clock-In (Kas Awal)
-  .post('/shift/clock-in', ({ body }: { body: any }) => {
+  // Get all shift audit records
+  .get('/shifts', () => {
     return {
       success: true,
-      data: {
-        shiftId: `shift-${Date.now()}`,
-        cashierId: body.cashierId,
-        cashierName: 'Budi (Kasir 1)',
-        startingCash: body.startingCash,
-        clockIn: new Date().toISOString(),
-        status: 'open'
-      }
+      data: memoryStore.shifts
+    };
+  })
+
+  // Shift Management: Clock-In (Kas Awal)
+  .post('/shift/clock-in', ({ body }: { body: any }) => {
+    const cashier = memoryStore.users.find(u => u.id === body.cashierId) || { name: 'Ahmad Kasir' };
+    const newShift = {
+      id: `shift-${Date.now()}`,
+      userId: body.cashierId,
+      cashierName: cashier.name,
+      clockIn: new Date().toISOString(),
+      clockOut: null,
+      startingCash: Number(body.startingCash),
+      salesCash: 0,
+      expectedCash: Number(body.startingCash),
+      actualCash: null,
+      difference: null,
+      notes: body.notes || 'Shift Aktif',
+      status: 'open'
+    };
+
+    memoryStore.shifts.unshift(newShift);
+
+    return {
+      success: true,
+      message: 'Clock-In Kasir Berhasil',
+      data: newShift
     };
   }, {
     body: t.Object({
       cashierId: t.String(),
-      startingCash: t.Number()
+      startingCash: t.Number(),
+      notes: t.Optional(t.String())
     })
   })
 
   // Shift Management: Clock-Out (Rekap Laci)
   .post('/shift/clock-out', ({ body }: { body: any }) => {
+    const shift = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts[0];
+    const clockOutTime = new Date().toISOString();
+    const startingCash = Number(body.startingCash ?? shift?.startingCash ?? 200000);
+    const totalSalesCash = Number(body.totalSalesCash ?? shift?.salesCash ?? 0);
+    const expectedCash = startingCash + totalSalesCash;
+    const actualCash = Number(body.actualCash);
+    const difference = actualCash - expectedCash;
+
+    if (shift) {
+      shift.clockOut = clockOutTime;
+      shift.startingCash = startingCash;
+      shift.salesCash = totalSalesCash;
+      shift.expectedCash = expectedCash;
+      shift.actualCash = actualCash;
+      shift.difference = difference;
+      shift.status = 'closed';
+      if (body.notes) shift.notes = body.notes;
+    }
+
     return {
       success: true,
+      message: 'Clock-Out Kasir Berhasil',
       data: {
         shiftId: body.shiftId,
-        clockOut: new Date().toISOString(),
-        startingCash: body.startingCash,
-        totalSalesCash: body.totalSalesCash,
-        expectedCash: body.startingCash + body.totalSalesCash,
-        actualCash: body.actualCash,
-        difference: body.actualCash - (body.startingCash + body.totalSalesCash),
+        clockOut: clockOutTime,
+        startingCash,
+        totalSalesCash,
+        expectedCash,
+        actualCash,
+        difference,
         status: 'closed'
       }
     };
   }, {
     body: t.Object({
       shiftId: t.String(),
-      startingCash: t.Number(),
-      totalSalesCash: t.Number(),
+      startingCash: t.Optional(t.Number()),
+      totalSalesCash: t.Optional(t.Number()),
       actualCash: t.Number(),
       notes: t.Optional(t.String())
     })

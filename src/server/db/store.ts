@@ -7,7 +7,8 @@ import {
   initialMembers,
   initialPromos,
   initialTransactions,
-  initialUsers
+  initialUsers,
+  initialShifts
 } from './seed.js';
 
 // In-Memory Data Store Fallback
@@ -20,5 +21,6 @@ export const memoryStore = {
   members: [...initialMembers],
   promos: [...initialPromos],
   transactions: [...initialTransactions],
-  users: [...initialUsers]
+  users: [...initialUsers],
+  shifts: [...initialShifts]
 };
