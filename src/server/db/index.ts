@@ -4,9 +4,11 @@ import dotenv from 'dotenv';
 import path from 'path';
 import * as schema from './schema.js';
 
-dotenv.config();
-
-const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/pos_minimarket';
+let rawUrl = (process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/pos_minimarket').trim();
+if ((rawUrl.startsWith('"') && rawUrl.endsWith('"')) || (rawUrl.startsWith("'") && rawUrl.endsWith("'"))) {
+  rawUrl = rawUrl.slice(1, -1).trim();
+}
+const connectionString = rawUrl;
 
 const isCloudDb = connectionString.includes('neon.tech') || 
                   connectionString.includes('sslmode=require') || 
