@@ -89,6 +89,8 @@
       return;
     }
 
+    const finalSku = form.sku ? form.sku.toUpperCase() : (form.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 20) || `SKU-${Date.now()}`);
+
     isSaving = true;
     try {
       if (editingId) {
@@ -98,7 +100,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             barcode: form.barcode,
-            sku: form.sku,
+            sku: finalSku,
             name: form.name,
             costPrice: Number(form.costPrice),
             sellPrice: Number(form.sellPrice),
@@ -110,7 +112,7 @@
 
         if (res.success) {
           const updatedImageUrl = res.data?.imageUrl !== undefined ? (res.data.imageUrl || '') : form.imageUrl;
-          products = products.map(p => p.id === editingId ? { ...p, ...form, imageUrl: updatedImageUrl } : p);
+          products = products.map(p => p.id === editingId ? { ...p, ...form, sku: finalSku, imageUrl: updatedImageUrl } : p);
         } else {
           alert('Gagal mengupdate produk: ' + (res.message || 'Unknown error'));
           return;
@@ -122,7 +124,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             barcode: form.barcode,
-            sku: form.sku || `SKU-${Date.now()}`,
+            sku: finalSku,
             name: form.name,
             categoryId: null,
             costPrice: Number(form.costPrice),
@@ -137,6 +139,7 @@
           const newProductData = {
             id: res.data?.id || `prod-${Date.now()}`,
             ...form,
+            sku: res.data?.sku || finalSku,
             imageUrl: res.data?.imageUrl || form.imageUrl || ''
           };
           products = [...products, newProductData];
@@ -258,9 +261,15 @@
       </div>
 
       <div class="space-y-3 text-xs">
-        <div>
-          <label class="text-slate-600 font-bold">Barcode</label>
-          <input type="text" bind:value={form.barcode} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono" />
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-600 font-bold">Barcode</label>
+            <input type="text" bind:value={form.barcode} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono" />
+          </div>
+          <div>
+            <label class="text-slate-600 font-bold">Kode SKU (Opsional)</label>
+            <input type="text" bind:value={form.sku} placeholder="Otomatis jika kosong" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono uppercase" />
+          </div>
         </div>
         <div>
           <label class="text-slate-600 font-bold">Nama Produk</label>
