@@ -4,6 +4,8 @@
   export let phone = "0812-3456-7890";
   export let invoiceNumber = "INV-20260910-001";
   export let cashierName = "Ahmad Kasir";
+  export let memberName = "";
+  export let earnedPoints = 0;
   export let items: any[] = [];
   export let subtotal = 0;
   export let discount = 0;
@@ -29,7 +31,10 @@
     <span>No: {invoiceNumber}</span>
     <span>{timestamp}</span>
   </div>
-  <div class="text-[11px] mb-1">Kasir: {cashierName}</div>
+  <div class="text-[11px] mb-0.5">Kasir: {cashierName}</div>
+  {#if memberName}
+    <div class="text-[11px] mb-1 font-bold">Member: {memberName} (+{earnedPoints} pts)</div>
+  {/if}
   
   <div class="border-b border-black border-dashed my-1"></div>
   

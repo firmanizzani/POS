@@ -11,7 +11,8 @@
     subtotal,
     discountTotal,
     grandTotal,
-    shiftStore
+    shiftStore,
+    appliedPromo
   } from '$lib/stores/posStore';
   import ThermalReceipt from '$lib/components/ThermalReceipt.svelte';
   import {
@@ -56,6 +57,53 @@
 
   $: selectedMember = members.find((m) => m.id === selectedMemberId);
   $: earnedPoints = $grandTotal > 0 ? Math.floor($grandTotal / 1000) : 0;
+
+  // Promo Code State
+  let promoInput = '';
+  let promos: any[] = [];
+
+  async function applyPromoCode() {
+    if (!promoInput) return;
+    const codeUpper = promoInput.trim().toUpperCase();
+
+    let found = promos.find((p) => p.code.toUpperCase() === codeUpper && p.status === 'ACTIVE');
+
+    if (!found) {
+      try {
+        const res = await fetch('/api/promos').then((r) => r.json());
+        if (res?.success && Array.isArray(res.data)) {
+          promos = res.data;
+          found = promos.find((p: any) => p.code.toUpperCase() === codeUpper && p.status === 'ACTIVE');
+        }
+      } catch (e) {}
+    }
+
+    if (!found) {
+      alert('Kode promo tidak valid atau tidak ditemukan!');
+      return;
+    }
+
+    if ($subtotal < (found.minPurchase || 0)) {
+      alert(`Minimal belanja untuk promo ini adalah ${formatRp(found.minPurchase)}`);
+      return;
+    }
+
+    const isPercent = found.value.includes('%') || found.type === 'PERCENTAGE';
+    const numericVal = Number(found.value.replace(/[^0-9]/g, '')) || 0;
+
+    appliedPromo.set({
+      code: found.code,
+      title: found.title,
+      type: isPercent ? 'percentage' : 'fixed',
+      value: numericVal
+    });
+
+    promoInput = '';
+  }
+
+  function removePromo() {
+    appliedPromo.set(null);
+  }
 
   interface ProductItem {
     id: string;
@@ -169,6 +217,15 @@
       }
     } catch (e) {
       console.warn('Failed to load members', e);
+    }
+
+    try {
+      const resP = await fetch('/api/promos').then(r => r.json());
+      if (resP?.success && Array.isArray(resP.data)) {
+        promos = resP.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load promos', e);
     }
   });
 
@@ -522,6 +579,43 @@
       <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
         <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Tagihan</span>
         <div class="text-3xl font-black text-sky-700">{formatRp($grandTotal)}</div>
+        {#if $discountTotal > 0}
+          <div class="text-xs text-amber-600 font-bold mt-1">Diskon Promo: -{formatRp($discountTotal)} (Subtotal: {formatRp($subtotal)})</div>
+        {/if}
+      </div>
+
+      <!-- Kode Promo Section -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-600 flex items-center space-x-1">
+            <Tag class="w-3.5 h-3.5 text-amber-600" />
+            <span>Kode Promo / Kupon Diskon</span>
+          </label>
+          {#if $appliedPromo}
+            <button on:click={removePromo} class="text-[11px] text-red-600 font-bold hover:underline">Hapus Promo</button>
+          {/if}
+        </div>
+        {#if $appliedPromo}
+          <div class="flex items-center justify-between bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-xs text-amber-900 font-bold">
+            <div class="flex items-center space-x-2">
+              <Tag class="w-4 h-4 text-amber-600" />
+              <span>{$appliedPromo.code} ({$appliedPromo.title})</span>
+            </div>
+            <span class="text-emerald-700 font-black">-{formatRp($discountTotal)}</span>
+          </div>
+        {:else}
+          <div class="flex space-x-2">
+            <input
+              type="text"
+              bind:value={promoInput}
+              placeholder="Contoh: HEMAT10"
+              class="flex-1 bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 text-xs font-mono uppercase focus:outline-none focus:border-sky-600"
+            />
+            <button on:click={applyPromoCode} class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-sm">
+              PAKAI PROMO
+            </button>
+          </div>
+        {/if}
       </div>
 
       <!-- Payment Method Selection -->
@@ -625,6 +719,8 @@
         <ThermalReceipt
           invoiceNumber={lastCompletedTransaction.invoiceNumber}
           cashierName={lastCompletedTransaction.cashierName}
+          memberName={lastCompletedTransaction.memberName}
+          earnedPoints={lastCompletedTransaction.earnedPoints}
           items={lastCompletedTransaction.items}
           subtotal={lastCompletedTransaction.subtotal}
           discount={lastCompletedTransaction.discount}
