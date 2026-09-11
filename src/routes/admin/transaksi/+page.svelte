@@ -37,11 +37,11 @@
       'Kasir',
       'Jumlah Item',
       'Metode Pembayaran',
-      'Subtotal (Rp)',
-      'Diskon (Rp)',
-      'Grand Total (Rp)',
-      'Dibayar (Rp)',
-      'Kembalian (Rp)',
+      'Subtotal',
+      'Diskon',
+      'Grand Total',
+      'Dibayar',
+      'Kembalian',
       'Rincian Barang Belanjaan'
     ];
 
@@ -49,17 +49,18 @@
       t.invoiceNumber,
       t.date,
       t.cashierName,
-      t.itemsCount,
+      `${t.itemsCount} item`,
       t.paymentMethod,
-      t.subtotal || t.grandTotal,
-      t.discount || 0,
-      t.grandTotal,
-      t.paidAmount,
-      t.changeAmount,
-      (t.items || []).map((i: any) => `${i.name} (${i.qty}x @${i.price})`).join('; ')
+      formatRp(t.subtotal || t.grandTotal),
+      formatRp(t.discount || 0),
+      formatRp(t.grandTotal),
+      formatRp(t.paidAmount),
+      formatRp(t.changeAmount),
+      (t.items || []).map((i: any) => `${i.name} (${i.qty}x @ ${formatRp(i.price)})`).join(' | ')
     ]);
 
     const rows = [
+      ['sep=;'],
       ['LAPORAN RIWAYAT TRANSAKSI PENJUALAN MINIMARKET'],
       [`Tanggal Ekspor: ${today}`],
       [`Total Transaksi Terfilter: ${filteredTransactions.length}`],
@@ -68,7 +69,7 @@
       ...dataRows
     ];
 
-    const csvContent = '\uFEFF' + rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csvContent = '\uFEFF' + rows.map(e => e.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -138,7 +139,7 @@
 
     <button on:click={exportAllTransactionsCSV} class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
       <Download class="w-4 h-4 text-sky-600" />
-      <span>EXPORT ALL TRANSACTIONS (CSV/EXCEL)</span>
+      <span>EXPORT ALL TRANSACTIONS (EXCEL/CSV)</span>
     </button>
   </div>
 
