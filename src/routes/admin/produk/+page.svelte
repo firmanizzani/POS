@@ -72,11 +72,12 @@
     if (isSkuTouched) return;
     form.sku = form.name
       .toUpperCase()
+      .replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '')
       .replace(/[^A-Z0-9\s]/g, '')
       .trim()
       .split(/\s+/)
       .join('-')
-      .slice(0, 50);
+      .slice(0, 25);
   }
 
   function handleNameInput() {
@@ -143,11 +144,12 @@
     const finalSku = form.sku ? form.sku.toUpperCase() : (
       form.name
         .toUpperCase()
+        .replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '')
         .replace(/[^A-Z0-9\s]/g, '')
         .trim()
         .split(/\s+/)
         .join('-')
-        .slice(0, 50) || `SKU-${Date.now()}`
+        .slice(0, 25) || `SKU-${Date.now()}`
     );
 
     isSaving = true;

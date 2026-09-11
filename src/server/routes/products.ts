@@ -55,7 +55,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
     const newProd = {
       id,
       barcode: body.barcode,
-      sku: body.sku || (body.name ? body.name.toUpperCase().replace(/[^A-Z0-9\s]/g, '').trim().split(/\s+/).join('-').slice(0, 50) : `SKU-${Date.now()}`),
+      sku: body.sku || (body.name ? body.name.toUpperCase().replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '').replace(/[^A-Z0-9\s]/g, '').trim().split(/\s+/).join('-').slice(0, 25) : `SKU-${Date.now()}`),
       name: body.name,
       categoryId: body.categoryId || null,
       costPrice: (body.costPrice ?? 0).toString(),
