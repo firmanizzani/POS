@@ -41,6 +41,39 @@
   function formatRp(val: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   }
+
+  function exportDashboardReport() {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = [
+      ['LAPORAN RINGKASAN DASHBOARD MINIMARKET'],
+      [`Tanggal Ekspor: ${today}`],
+      [''],
+      ['METRIK UTAMA'],
+      ['Metrik', 'Nilai'],
+      ['Total Omset (Gross)', analytics.totalOmset],
+      ['Profit Bersih (Net)', analytics.netProfit],
+      ['Total Transaksi', analytics.totalTransactions],
+      ['Rata-rata Basket Size', analytics.averageOrderValue],
+      [''],
+      ['TOP SELLING PRODUCTS (PRODUK TERLARIS)'],
+      ['Nama Produk', 'Kategori', 'Jumlah Terjual (pcs)', 'Total Pendapatan (Rp)'],
+      ...analytics.topProducts.map(tp => [tp.name, tp.category, tp.soldQty, tp.revenue]),
+      [''],
+      ['PERINGATAN STOK MENIPIS'],
+      ['Nama Produk', 'Kategori', 'Sisa Stok (pcs)', 'Batas Alert (pcs)'],
+      ...analytics.lowStockAlerts.map(ls => [ls.name, ls.category, ls.stock, ls.minAlert])
+    ];
+
+    const csvContent = '\uFEFF' + rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Laporan_Analitik_Minimarket_${today}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 </script>
 
 <div class="space-y-6">
@@ -51,9 +84,9 @@
       <p class="text-xs text-slate-500 mt-1">Ringkasan performa penjualan, profit bersih, dan stok barang</p>
     </div>
 
-    <button on:click={() => alert('Laporan PDF/Excel sedang di-generate!')} class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm">
+    <button on:click={exportDashboardReport} class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
       <Download class="w-4 h-4 text-sky-600" />
-      <span>EXPORT LAPORAN</span>
+      <span>EXPORT LAPORAN (CSV/EXCEL)</span>
     </button>
   </div>
 

@@ -29,8 +29,102 @@
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   }
 
-  function downloadDigitalPDF(trx: any) {
-    alert(`Mengunduh Struk Digital (PDF) untuk invoice ${trx.invoiceNumber}`);
+  function exportAllTransactionsCSV() {
+    const today = new Date().toISOString().slice(0, 10);
+    const headers = [
+      'No. Invoice',
+      'Waktu Transaksi',
+      'Kasir',
+      'Jumlah Item',
+      'Metode Pembayaran',
+      'Subtotal (Rp)',
+      'Diskon (Rp)',
+      'Grand Total (Rp)',
+      'Dibayar (Rp)',
+      'Kembalian (Rp)',
+      'Rincian Barang Belanjaan'
+    ];
+
+    const dataRows = filteredTransactions.map(t => [
+      t.invoiceNumber,
+      t.date,
+      t.cashierName,
+      t.itemsCount,
+      t.paymentMethod,
+      t.subtotal || t.grandTotal,
+      t.discount || 0,
+      t.grandTotal,
+      t.paidAmount,
+      t.changeAmount,
+      (t.items || []).map((i: any) => `${i.name} (${i.qty}x @${i.price})`).join('; ')
+    ]);
+
+    const rows = [
+      ['LAPORAN RIWAYAT TRANSAKSI PENJUALAN MINIMARKET'],
+      [`Tanggal Ekspor: ${today}`],
+      [`Total Transaksi Terfilter: ${filteredTransactions.length}`],
+      [''],
+      headers,
+      ...dataRows
+    ];
+
+    const csvContent = '\uFEFF' + rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Laporan_Transaksi_Penjualan_${today}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function printDigitalReceipt(trx: any) {
+    const printWin = window.open('', '_blank', 'width=400,height=600');
+    if (!printWin) return;
+
+    const items = (trx.items || [])
+      .map((i: any) => `<div style="display:flex;justify-content:space-between;margin:4px 0;"><span>${i.name} x${i.qty}</span><span>${formatRp(i.price * i.qty)}</span></div>`)
+      .join('');
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Struk Digital ${trx.invoiceNumber}</title>
+          <style>
+            body { font-family: monospace; padding: 20px; width: 300px; margin: 0 auto; color: #1e293b; }
+            h2 { text-align: center; margin: 0 0 5px; font-size: 16px; }
+            p { text-align: center; margin: 0 0 15px; font-size: 10px; color: #64748b; }
+            .line { border-top: 1px dashed #cbd5e1; margin: 10px 0; }
+            .flex { display: flex; justify-content: space-between; font-size: 12px; margin: 4px 0; }
+            .bold { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h2>MINIMARKET POS</h2>
+          <p>Struk Penjualan Resmi</p>
+          <div class="line"></div>
+          <div class="flex"><span>Invoice:</span><span class="bold">${trx.invoiceNumber}</span></div>
+          <div class="flex"><span>Kasir:</span><span>${trx.cashierName}</span></div>
+          <div class="flex"><span>Waktu:</span><span>${trx.date}</span></div>
+          <div class="flex"><span>Metode:</span><span class="bold">${trx.paymentMethod}</span></div>
+          <div class="line"></div>
+          ${items}
+          <div class="line"></div>
+          <div class="flex bold"><span>TOTAL:</span><span>${formatRp(trx.grandTotal)}</span></div>
+          <div class="flex"><span>Dibayar:</span><span>${formatRp(trx.paidAmount)}</span></div>
+          <div class="flex"><span>Kembalian:</span><span>${formatRp(trx.changeAmount)}</span></div>
+          <div class="line"></div>
+          <p>-- Terima Kasih Selamat Belanja Kembali --</p>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+    }, 250);
   }
 </script>
 
@@ -42,9 +136,9 @@
       <p class="text-xs text-slate-500 mt-1">Daftar lengkap struk penjualan, metode pembayaran, dan cetak ulang struk digital</p>
     </div>
 
-    <button on:click={() => alert('Exporting all transactions report to Excel/PDF...')} class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm">
+    <button on:click={exportAllTransactionsCSV} class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
       <Download class="w-4 h-4 text-sky-600" />
-      <span>EXPORT ALL TRANSACTIONS</span>
+      <span>EXPORT ALL TRANSACTIONS (CSV/EXCEL)</span>
     </button>
   </div>
 
@@ -113,11 +207,11 @@
                 <span>Detail</span>
               </button>
               <button
-                on:click={() => downloadDigitalPDF(t)}
+                on:click={() => printDigitalReceipt(t)}
                 class="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold rounded-lg border border-sky-200"
               >
                 <Download class="w-3.5 h-3.5 inline mr-1" />
-                <span>PDF</span>
+                <span>Cetak / PDF</span>
               </button>
             </td>
           </tr>
@@ -181,13 +275,13 @@
       </div>
 
       <div class="grid grid-cols-2 gap-2 pt-2">
-        <button on:click={() => downloadDigitalPDF(selectedTrx)} class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-md shadow-sky-600/20">
+        <button on:click={() => printDigitalReceipt(selectedTrx)} class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1 shadow-md shadow-sky-600/20">
           <Download class="w-4 h-4" />
-          <span>UNDUH PDF</span>
+          <span>UNDUH PDF / STRUK</span>
         </button>
-        <button on:click={() => window.print()} class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 border border-slate-200">
+        <button on:click={() => printDigitalReceipt(selectedTrx)} class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 border border-slate-200">
           <Printer class="w-4 h-4" />
-          <span>CETAK ulang</span>
+          <span>CETAK REPRINTS</span>
         </button>
       </div>
     </div>
