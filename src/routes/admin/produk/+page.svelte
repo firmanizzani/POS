@@ -70,8 +70,8 @@
         fd.append('productName', form.name);
       }
       const res = await fetch('/api/upload', { method: 'POST', body: fd }).then(r => r.json());
-      if (res.success) {
-        form.imageUrl = res.url;
+      if (res.success && res.url) {
+        form = { ...form, imageUrl: res.url };
       } else {
         uploadError = res.message || 'Gagal upload gambar';
       }
@@ -104,12 +104,13 @@
             sellPrice: Number(form.sellPrice),
             stock: Number(form.stock),
             unit: form.unit,
-            imageUrl: form.imageUrl || ''
+            imageUrl: form.imageUrl || null
           })
         }).then(r => r.json());
 
         if (res.success) {
-          products = products.map(p => p.id === editingId ? { ...p, ...form } : p);
+          const updatedImageUrl = res.data?.imageUrl !== undefined ? (res.data.imageUrl || '') : form.imageUrl;
+          products = products.map(p => p.id === editingId ? { ...p, ...form, imageUrl: updatedImageUrl } : p);
         } else {
           alert('Gagal mengupdate produk: ' + (res.message || 'Unknown error'));
           return;
@@ -133,7 +134,12 @@
         }).then(r => r.json());
 
         if (res.success) {
-          products = [...products, { id: res.data?.id || `prod-${Date.now()}`, ...form }];
+          const newProductData = {
+            id: res.data?.id || `prod-${Date.now()}`,
+            ...form,
+            imageUrl: res.data?.imageUrl || form.imageUrl || ''
+          };
+          products = [...products, newProductData];
         } else {
           alert('Gagal menyimpan produk: ' + (res.message || 'Unknown error'));
           return;

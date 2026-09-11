@@ -58,8 +58,8 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       sku: body.sku || `SKU-${Date.now()}`,
       name: body.name,
       categoryId: body.categoryId || null,
-      costPrice: body.costPrice.toString(),
-      sellPrice: body.sellPrice.toString(),
+      costPrice: (body.costPrice ?? 0).toString(),
+      sellPrice: (body.sellPrice ?? 0).toString(),
       stock: body.stock || 0,
       unit: body.unit || 'pcs',
       imageUrl: body.imageUrl || null,
@@ -92,17 +92,22 @@ export const productRoutes = new Elysia({ prefix: '/products' })
     })
   })
   .put('/:id', async ({ params, body }: { params: { id: string }, body: any }) => {
+    const imageUrlToSave = body.imageUrl !== undefined ? (body.imageUrl || null) : undefined;
+    const costPriceToSave = body.costPrice !== undefined ? body.costPrice.toString() : undefined;
+    const sellPriceToSave = body.sellPrice !== undefined ? body.sellPrice.toString() : undefined;
+
     try {
       await db.update(products)
         .set({
           barcode: body.barcode,
           sku: body.sku,
           name: body.name,
-          costPrice: body.costPrice ? body.costPrice.toString() : undefined,
-          sellPrice: body.sellPrice ? body.sellPrice.toString() : undefined,
+          costPrice: costPriceToSave,
+          sellPrice: sellPriceToSave,
           stock: body.stock,
           unit: body.unit,
-          imageUrl: body.imageUrl !== undefined ? body.imageUrl : undefined
+          imageUrl: imageUrlToSave,
+          updatedAt: new Date()
         })
         .where(eq(products.id, params.id));
     } catch (error: any) {
@@ -116,15 +121,30 @@ export const productRoutes = new Elysia({ prefix: '/products' })
         barcode: body.barcode ?? memoryStore.products[idx].barcode,
         sku: body.sku ?? memoryStore.products[idx].sku,
         name: body.name ?? memoryStore.products[idx].name,
-        costPrice: body.costPrice ? body.costPrice.toString() : memoryStore.products[idx].costPrice,
-        sellPrice: body.sellPrice ? body.sellPrice.toString() : memoryStore.products[idx].sellPrice,
+        costPrice: costPriceToSave ?? memoryStore.products[idx].costPrice,
+        sellPrice: sellPriceToSave ?? memoryStore.products[idx].sellPrice,
         stock: body.stock ?? memoryStore.products[idx].stock,
         unit: body.unit ?? memoryStore.products[idx].unit,
-        imageUrl: body.imageUrl !== undefined ? body.imageUrl : memoryStore.products[idx].imageUrl
+        imageUrl: imageUrlToSave !== undefined ? imageUrlToSave : memoryStore.products[idx].imageUrl,
+        updatedAt: new Date()
       };
     }
 
-    return { success: true, message: 'Produk berhasil diupdate' };
+    return {
+      success: true,
+      message: 'Produk berhasil diupdate',
+      data: {
+        id: params.id,
+        barcode: body.barcode,
+        sku: body.sku,
+        name: body.name,
+        costPrice: body.costPrice,
+        sellPrice: body.sellPrice,
+        stock: body.stock,
+        unit: body.unit,
+        imageUrl: imageUrlToSave
+      }
+    };
   })
   .delete('/:id', async ({ params }: { params: { id: string } }) => {
     try {
