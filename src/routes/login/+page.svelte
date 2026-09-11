@@ -77,7 +77,7 @@
         <Store class="w-8 h-8 text-white" />
       </div>
       <div>
-        <h1 class="text-2xl font-black text-white tracking-wide">POS MINIMARKET</h1>
+        <h1 class="text-2xl font-black text-white tracking-wide">PopMart</h1>
         <p class="text-sky-200 text-sm font-medium">Sistem Kasir Professional</p>
       </div>
     </div>
@@ -97,7 +97,7 @@
           <Store class="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 class="text-xl font-black text-slate-900">POS MINIMARKET</h1>
+          <h1 class="text-xl font-black text-slate-900">PopMart</h1>
           <p class="text-sky-600 text-xs font-semibold">Sistem Kasir Professional</p>
         </div>
       </div>

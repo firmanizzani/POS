@@ -1,5 +1,5 @@
 <script lang="ts">
-  export let storeName = "MINIMARKET SEJAHTERA";
+  export let storeName = "PopMart";
   export let address = "Jl. Raya Utama No. 88, Jakarta";
   export let phone = "0812-3456-7890";
   export let invoiceNumber = "INV-20260910-001";

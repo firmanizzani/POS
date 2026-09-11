@@ -31,7 +31,7 @@
       </div>
       <div>
         <h1 class="text-base font-black text-slate-900 tracking-wide">KASIR POS</h1>
-        <p class="text-[11px] text-sky-600 font-semibold">Minimarket Professional</p>
+        <p class="text-[11px] text-sky-600 font-semibold">PopMart</p>
       </div>
     </div>
 
