@@ -60,10 +60,10 @@ export const transactionRoutes = new Elysia({ prefix: '/transactions' })
     }
 
     const userMap = new Map(memoryStore.users.map(u => [u.id, u.name]));
-    const memberMap = new Map(memoryStore.members.map(m => [m.id, `${m.name} (${m.code})`]));
+    const memberMap = new Map(memoryStore.members.map((m: any) => [m.id, `${m.name} (${m.memberCode || m.code || ''})`]));
     const promoMap = new Map(memoryStore.promos.map(p => [p.id, p.code]));
 
-    const data = memoryStore.transactions.map(t => ({
+    const data = memoryStore.transactions.map((t: any) => ({
       invoiceNumber: t.invoiceNumber,
       date: formatDateTime(t.createdAt),
       cashierName: userMap.get(t.cashierId) || 'Ahmad Kasir',
