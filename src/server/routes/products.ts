@@ -36,7 +36,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
         };
       }
     } catch (error: any) {
-      console.warn('DB query failed, fallback to memoryStore:', error.message);
+      console.error('GET /products DB query failed:', error.message || error);
     }
 
     // Fallback to memoryStore

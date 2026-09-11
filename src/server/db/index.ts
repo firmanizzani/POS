@@ -8,9 +8,15 @@ dotenv.config();
 
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/pos_minimarket';
 
+const isCloudDb = connectionString.includes('neon.tech') || 
+                  connectionString.includes('sslmode=require') || 
+                  connectionString.includes('render.com') ||
+                  connectionString.includes('supabase.com') ||
+                  connectionString.includes('.aws.');
+
 const pool = new pg.Pool({
   connectionString,
-  ssl: connectionString.includes('neon.tech') ? { rejectUnauthorized: false } : false,
+  ssl: isCloudDb ? { rejectUnauthorized: false } : false,
 });
 
 export const db = drizzle(pool, { schema });
