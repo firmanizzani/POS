@@ -62,6 +62,42 @@
   let promoInput = '';
   let promos: any[] = [];
 
+  // Shift State
+  let clockOutActualCash: number | undefined = undefined;
+  let isClockingOut = false;
+
+  async function handleClockOut() {
+    if (!clockOutActualCash || clockOutActualCash < 0) {
+      alert('Masukkan total nominal uang fisik di laci terlebih dahulu!');
+      return;
+    }
+    isClockingOut = true;
+    try {
+      const res = await fetch('/api/cashier/shift/clock-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shiftId: $shiftStore.shiftId || 'shift-1001',
+          startingCash: $shiftStore.startingCash,
+          actualCash: Number(clockOutActualCash)
+        })
+      }).then(r => r.json());
+
+      if (res?.success) {
+        const diff = res.data?.difference ?? 0;
+        const diffMsg = diff === 0 ? 'Uang Laci IMPAS (Pas 100%)' : (diff > 0 ? `Uang Laci LEBIH +${formatRp(diff)}` : `Uang Laci KURANG ${formatRp(diff)}`);
+        alert(`Shift Berhasil Ditutup!\nRekap: ${diffMsg}`);
+        showShiftModal = false;
+      } else {
+        alert('Gagal menutup shift: ' + (res?.message || 'Error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isClockingOut = false;
+    }
+  }
+
   async function applyPromoCode() {
     if (!promoInput) return;
     const codeUpper = promoInput.trim().toUpperCase();
@@ -848,15 +884,13 @@
 
       <div class="space-y-3 pt-2">
         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Rekap & Clock-Out Laci</h4>
-        <input type="number" placeholder="Masukkan total uang fisik di laci (Rp)" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-600" />
+        <input type="number" bind:value={clockOutActualCash} placeholder="Masukkan total uang fisik di laci (Rp)" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-600 font-mono font-bold" />
         <button
-          on:click={() => {
-            alert('Shift berhasil ditutup dan rekap kasir telah dicetak!');
-            showShiftModal = false;
-          }}
-          class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-red-600/20"
+          on:click={handleClockOut}
+          disabled={isClockingOut}
+          class="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-red-600/20"
         >
-          CLOCK-OUT & CETAK REKAP LACI
+          {isClockingOut ? 'PROSES CLOCK-OUT...' : 'CLOCK-OUT & CETAK REKAP LACI'}
         </button>
       </div>
     </div>

@@ -1,9 +1,56 @@
 import { Elysia, t } from 'elysia';
+import { db } from '../db/index.js';
+import { cashierShifts, users } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 import { memoryStore } from '../db/store.js';
 
 export const cashierRoutes = new Elysia({ prefix: '/cashier' })
-  // Get all shift audit records
-  .get('/shifts', () => {
+  // Get all shift audit records (from DB with memoryStore fallback)
+  .get('/shifts', async () => {
+    try {
+      const shiftsFromDb = await db.select({
+        id: cashierShifts.id,
+        userId: cashierShifts.userId,
+        cashierName: users.name,
+        clockIn: cashierShifts.clockIn,
+        clockOut: cashierShifts.clockOut,
+        startingCash: cashierShifts.startingCash,
+        expectedCash: cashierShifts.expectedCash,
+        actualCash: cashierShifts.actualCash,
+        notes: cashierShifts.notes,
+        status: cashierShifts.status
+      })
+      .from(cashierShifts)
+      .leftJoin(users, eq(cashierShifts.userId, users.id));
+
+      if (shiftsFromDb.length > 0) {
+        return {
+          success: true,
+          data: shiftsFromDb.map(s => {
+            const start = Number(s.startingCash || 0);
+            const exp = Number(s.expectedCash || start);
+            const act = s.actualCash !== null ? Number(s.actualCash) : null;
+            return {
+              id: s.id,
+              userId: s.userId,
+              cashierName: s.cashierName || 'Kasir',
+              clockIn: s.clockIn ? new Date(s.clockIn).toISOString() : new Date().toISOString(),
+              clockOut: s.clockOut ? new Date(s.clockOut).toISOString() : null,
+              startingCash: start,
+              salesCash: Math.max(0, exp - start),
+              expectedCash: exp,
+              actualCash: act,
+              difference: act !== null ? act - exp : null,
+              notes: s.notes || '',
+              status: s.status || 'open'
+            };
+          })
+        };
+      }
+    } catch (e: any) {
+      console.warn('DB cashierShifts error, fallback to memoryStore:', e.message);
+    }
+
     return {
       success: true,
       data: memoryStore.shifts
@@ -11,13 +58,16 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   })
 
   // Shift Management: Clock-In (Kas Awal)
-  .post('/shift/clock-in', ({ body }: { body: any }) => {
+  .post('/shift/clock-in', async ({ body }: { body: any }) => {
     const cashier = memoryStore.users.find(u => u.id === body.cashierId) || { name: 'Ahmad Kasir' };
+    const shiftId = `shift-${Date.now()}`;
+    const now = new Date();
+
     const newShift = {
-      id: `shift-${Date.now()}`,
+      id: shiftId,
       userId: body.cashierId,
       cashierName: cashier.name,
-      clockIn: new Date().toISOString(),
+      clockIn: now.toISOString(),
       clockOut: null,
       startingCash: Number(body.startingCash),
       salesCash: 0,
@@ -27,6 +77,20 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       notes: body.notes || 'Shift Aktif',
       status: 'open'
     };
+
+    try {
+      await db.insert(cashierShifts).values({
+        id: shiftId,
+        userId: body.cashierId,
+        clockIn: now,
+        startingCash: body.startingCash.toString(),
+        expectedCash: body.startingCash.toString(),
+        notes: body.notes || 'Shift Aktif',
+        status: 'open'
+      });
+    } catch (e: any) {
+      console.warn('DB insert shift error, saved to memoryStore:', e.message);
+    }
 
     memoryStore.shifts.unshift(newShift);
 
@@ -44,9 +108,9 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   })
 
   // Shift Management: Clock-Out (Rekap Laci)
-  .post('/shift/clock-out', ({ body }: { body: any }) => {
+  .post('/shift/clock-out', async ({ body }: { body: any }) => {
     const shift = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts[0];
-    const clockOutTime = new Date().toISOString();
+    const clockOutTime = new Date();
     const startingCash = Number(body.startingCash ?? shift?.startingCash ?? 200000);
     const totalSalesCash = Number(body.totalSalesCash ?? shift?.salesCash ?? 0);
     const expectedCash = startingCash + totalSalesCash;
@@ -54,7 +118,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     const difference = actualCash - expectedCash;
 
     if (shift) {
-      shift.clockOut = clockOutTime;
+      shift.clockOut = clockOutTime.toISOString();
       shift.startingCash = startingCash;
       shift.salesCash = totalSalesCash;
       shift.expectedCash = expectedCash;
@@ -64,12 +128,27 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       if (body.notes) shift.notes = body.notes;
     }
 
+    try {
+      await db.update(cashierShifts)
+        .set({
+          clockOut: clockOutTime,
+          startingCash: startingCash.toString(),
+          expectedCash: expectedCash.toString(),
+          actualCash: actualCash.toString(),
+          notes: body.notes || (shift ? shift.notes : ''),
+          status: 'closed'
+        })
+        .where(eq(cashierShifts.id, body.shiftId));
+    } catch (e: any) {
+      console.warn('DB update shift error, updated in memoryStore:', e.message);
+    }
+
     return {
       success: true,
       message: 'Clock-Out Kasir Berhasil',
       data: {
         shiftId: body.shiftId,
-        clockOut: clockOutTime,
+        clockOut: clockOutTime.toISOString(),
         startingCash,
         totalSalesCash,
         expectedCash,
