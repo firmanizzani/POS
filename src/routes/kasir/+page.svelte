@@ -47,6 +47,16 @@
 
   let lastCompletedTransaction: any = null;
 
+  // Member & Loyalty State
+  let members: any[] = [];
+  let selectedMemberId: string = '';
+  let showAddMemberModal = false;
+  let newMemberForm = { name: '', phone: '' };
+  let isRegisteringMember = false;
+
+  $: selectedMember = members.find((m) => m.id === selectedMemberId);
+  $: earnedPoints = $grandTotal > 0 ? Math.floor($grandTotal / 1000) : 0;
+
   interface ProductItem {
     id: string;
     barcode: string;
@@ -151,7 +161,44 @@
     } catch (e) {
       console.warn('Using default product list', e);
     }
+
+    try {
+      const resM = await fetch('/api/members').then(r => r.json());
+      if (resM?.success && Array.isArray(resM.data)) {
+        members = resM.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load members', e);
+    }
   });
+
+  async function registerQuickMember() {
+    if (!newMemberForm.name || !newMemberForm.phone) {
+      alert('Nama & No. HP wajib diisi!');
+      return;
+    }
+    isRegisteringMember = true;
+    try {
+      const res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMemberForm)
+      }).then(r => r.json());
+
+      if (res?.success && res.data) {
+        members = [res.data, ...members];
+        selectedMemberId = res.data.id;
+        showAddMemberModal = false;
+        newMemberForm = { name: '', phone: '' };
+      } else {
+        alert('Gagal mendaftar member: ' + (res?.message || 'Error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isRegisteringMember = false;
+    }
+  }
 
   const categories = [
     'All',
@@ -196,9 +243,15 @@
       return;
     }
 
+    if (selectedMember) {
+      selectedMember.points += earnedPoints;
+    }
+
     lastCompletedTransaction = {
       invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
       cashierName: $shiftStore.cashierName,
+      memberName: selectedMember ? `${selectedMember.name} (${selectedMember.code})` : undefined,
+      earnedPoints: selectedMember ? earnedPoints : 0,
       items: [...$cartItems],
       subtotal: $subtotal,
       discount: $discountTotal,
@@ -213,6 +266,7 @@
     showReceiptModal = true;
     clearCart();
     paidAmount = 0;
+    selectedMemberId = '';
   }
 
   function printReceipt() {
@@ -393,6 +447,32 @@
           <span>TOTAL BAYAR</span>
           <span class="text-sky-700 font-black">{formatRp($grandTotal)}</span>
         </div>
+      </div>
+
+      <!-- Member Selector -->
+      <div class="pt-2 border-t border-slate-200 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-bold text-slate-700 flex items-center space-x-1">
+            <UserCheck class="w-3.5 h-3.5 text-sky-600" />
+            <span>Member Loyalitas</span>
+          </label>
+          <button on:click={() => showAddMemberModal = true} class="text-[10px] text-sky-600 font-bold hover:underline flex items-center space-x-0.5">
+            <Plus class="w-3 h-3" />
+            <span>Member Baru</span>
+          </button>
+        </div>
+        <select bind:value={selectedMemberId} class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-sky-600">
+          <option value="">-- Non-Member (Umum) --</option>
+          {#each members as m}
+            <option value={m.id}>{m.name} ({m.code}) - {m.points} pts</option>
+          {/each}
+        </select>
+        {#if selectedMember}
+          <div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-lg p-2 text-[11px] text-amber-800 font-medium">
+            <span>Tier: <strong>{selectedMember.tier || 'BRONZE'}</strong> ({selectedMember.points} pts)</span>
+            <span class="text-emerald-700 font-bold">+{earnedPoints} pts</span>
+          </div>
+        {/if}
       </div>
 
       <!-- Action Buttons -->
@@ -652,6 +732,38 @@
           CLOCK-OUT & CETAK REKAP LACI
         </button>
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- MODAL 5: QUICK MEMBER REGISTRATION -->
+{#if showAddMemberModal}
+  <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+          <UserCheck class="w-5 h-5 text-sky-600" />
+          <span>Registrasi Member Baru</span>
+        </h3>
+        <button on:click={() => showAddMemberModal = false} class="text-slate-400 hover:text-slate-700">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-600 font-bold">Nama Lengkap Member</label>
+          <input type="text" bind:value={newMemberForm.name} placeholder="Contoh: Budi Santoso" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 focus:outline-none focus:border-sky-600" />
+        </div>
+        <div>
+          <label class="text-slate-600 font-bold">No. Telepon / WhatsApp</label>
+          <input type="text" bind:value={newMemberForm.phone} placeholder="081234567890" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono focus:outline-none focus:border-sky-600" />
+        </div>
+      </div>
+
+      <button on:click={registerQuickMember} disabled={isRegisteringMember} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
+        {isRegisteringMember ? 'MENDAFTARKAN...' : 'DAFTARKAN & PILIH MEMBER'}
+      </button>
     </div>
   </div>
 {/if}
