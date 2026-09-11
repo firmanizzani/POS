@@ -25,30 +25,18 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id));
 
-      if (allProducts.length > 0) {
-        return {
-          success: true,
-          data: allProducts.map(p => ({
-            ...p,
-            costPrice: Number(p.costPrice),
-            sellPrice: Number(p.sellPrice)
-          }))
-        };
-      }
+      return {
+        success: true,
+        data: allProducts.map(p => ({
+          ...p,
+          costPrice: Number(p.costPrice),
+          sellPrice: Number(p.sellPrice)
+        }))
+      };
     } catch (error: any) {
       console.error('GET /products DB query failed:', error.message || error);
+      return { success: false, message: 'Gagal mengambil data produk dari database: ' + (error.message || 'Unknown error'), data: [] };
     }
-
-    // Fallback to memoryStore
-    const categoryMap = new Map(memoryStore.categories.map(c => [c.id, c.name]));
-    const data = memoryStore.products.map(p => ({
-      ...p,
-      categoryName: categoryMap.get(p.categoryId || '') || 'Lainnya',
-      costPrice: Number(p.costPrice),
-      sellPrice: Number(p.sellPrice)
-    }));
-
-    return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
     const id = `prod-${Date.now()}`;
@@ -71,13 +59,11 @@ export const productRoutes = new Elysia({ prefix: '/products' })
 
     try {
       await db.insert(products).values(newProd);
+      return { success: true, message: 'Produk berhasil ditambahkan ke database Neon', data: newProd };
     } catch (error: any) {
-      console.warn('DB insert failed, fallback to memoryStore:', error.message);
+      console.error('DB insert failed:', error.message);
+      return { success: false, message: 'Gagal menambahkan produk ke database: ' + error.message };
     }
-
-    memoryStore.products.push(newProd);
-
-    return { success: true, message: 'Produk berhasil ditambahkan', data: newProd };
   }, {
     body: t.Object({
       barcode: t.String(),
@@ -110,50 +96,33 @@ export const productRoutes = new Elysia({ prefix: '/products' })
           updatedAt: new Date()
         })
         .where(eq(products.id, params.id));
-    } catch (error: any) {
-      console.warn('DB update failed, fallback to memoryStore:', error.message);
-    }
 
-    const idx = memoryStore.products.findIndex(p => p.id === params.id);
-    if (idx !== -1) {
-      memoryStore.products[idx] = {
-        ...memoryStore.products[idx],
-        barcode: body.barcode ?? memoryStore.products[idx].barcode,
-        sku: body.sku ?? memoryStore.products[idx].sku,
-        name: body.name ?? memoryStore.products[idx].name,
-        costPrice: costPriceToSave ?? memoryStore.products[idx].costPrice,
-        sellPrice: sellPriceToSave ?? memoryStore.products[idx].sellPrice,
-        stock: body.stock ?? memoryStore.products[idx].stock,
-        unit: body.unit ?? memoryStore.products[idx].unit,
-        imageUrl: imageUrlToSave !== undefined ? imageUrlToSave : memoryStore.products[idx].imageUrl,
-        updatedAt: new Date()
+      return {
+        success: true,
+        message: 'Produk berhasil diupdate di database Neon',
+        data: {
+          id: params.id,
+          barcode: body.barcode,
+          sku: body.sku,
+          name: body.name,
+          costPrice: body.costPrice,
+          sellPrice: body.sellPrice,
+          stock: body.stock,
+          unit: body.unit,
+          imageUrl: imageUrlToSave
+        }
       };
+    } catch (error: any) {
+      console.error('DB update failed:', error.message);
+      return { success: false, message: 'Gagal mengupdate produk di database: ' + error.message };
     }
-
-    return {
-      success: true,
-      message: 'Produk berhasil diupdate',
-      data: {
-        id: params.id,
-        barcode: body.barcode,
-        sku: body.sku,
-        name: body.name,
-        costPrice: body.costPrice,
-        sellPrice: body.sellPrice,
-        stock: body.stock,
-        unit: body.unit,
-        imageUrl: imageUrlToSave
-      }
-    };
   })
   .delete('/:id', async ({ params }: { params: { id: string } }) => {
     try {
       await db.delete(products).where(eq(products.id, params.id));
+      return { success: true, message: 'Produk berhasil dihapus dari database Neon' };
     } catch (error: any) {
-      console.warn('DB delete failed, fallback to memoryStore:', error.message);
+      console.error('DB delete failed:', error.message);
+      return { success: false, message: 'Gagal menghapus produk dari database: ' + error.message };
     }
-
-    memoryStore.products = memoryStore.products.filter(p => p.id !== params.id);
-
-    return { success: true, message: 'Produk berhasil dihapus' };
   });
