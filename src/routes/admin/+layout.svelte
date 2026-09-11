@@ -13,7 +13,6 @@
     Percent,
     Store,
     LogOut,
-    User,
     UserCog
   } from 'lucide-svelte';
 
@@ -86,37 +85,18 @@
   <!-- Admin Content: Sidebar + Page -->
   <div class="flex-1 flex overflow-hidden">
     <!-- Admin Sidebar -->
-    <aside class="w-64 bg-white border-r border-slate-200 p-4 space-y-4 flex flex-col justify-between shadow-sm overflow-y-auto">
-      <div class="space-y-6">
-        <div class="px-2">
-          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">MODUL ADMIN</h2>
-          <p class="text-[11px] text-slate-500 mt-0.5">Pengelolaan minimarket terpusat</p>
-        </div>
-
-        <nav class="space-y-1">
-          {#each adminNav as nav}
-            <a
-              href={nav.href}
-              class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {$page.url.pathname === nav.href ? 'bg-sky-50 text-sky-700 border border-sky-200 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}"
-            >
-              <svelte:component this={nav.icon} class="w-4 h-4" />
-              <span>{nav.label}</span>
-            </a>
-          {/each}
-        </nav>
-      </div>
-
-      <!-- System Info Footer -->
-      <div class="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2 text-xs">
-        <div class="flex items-center justify-between">
-          <span class="text-slate-500">Database:</span>
-          <span class="text-emerald-700 font-bold">PostgreSQL</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-slate-500">Backend:</span>
-          <span class="text-sky-700 font-bold">Elysia.js</span>
-        </div>
-      </div>
+    <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col justify-between shadow-sm overflow-y-auto">
+      <nav class="space-y-1">
+        {#each adminNav as nav}
+          <a
+            href={nav.href}
+            class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all {$page.url.pathname === nav.href ? 'bg-sky-50 text-sky-700 border border-sky-200 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}"
+          >
+            <svelte:component this={nav.icon} class="w-4 h-4" />
+            <span>{nav.label}</span>
+          </a>
+        {/each}
+      </nav>
     </aside>
 
     <!-- Admin Main Content -->
