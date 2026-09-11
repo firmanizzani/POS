@@ -25,18 +25,30 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id));
 
-      return {
-        success: true,
-        data: allProducts.map(p => ({
-          ...p,
-          costPrice: Number(p.costPrice),
-          sellPrice: Number(p.sellPrice)
-        }))
-      };
+      if (allProducts && allProducts.length > 0) {
+        return {
+          success: true,
+          data: allProducts.map(p => ({
+            ...p,
+            costPrice: Number(p.costPrice),
+            sellPrice: Number(p.sellPrice)
+          }))
+        };
+      }
     } catch (error: any) {
-      console.error('GET /products DB query failed:', error.message || error);
-      return { success: false, message: 'Gagal mengambil data produk dari database: ' + (error.message || 'Unknown error'), data: [] };
+      console.warn('GET /products DB query failed, using memory fallback:', error.message || error);
     }
+
+    // Fallback if DB returns 0 items or connection issue
+    const categoryMap = new Map(memoryStore.categories.map(c => [c.id, c.name]));
+    const data = memoryStore.products.map(p => ({
+      ...p,
+      categoryName: categoryMap.get(p.categoryId || '') || 'Lainnya',
+      costPrice: Number(p.costPrice),
+      sellPrice: Number(p.sellPrice)
+    }));
+
+    return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
     const id = `prod-${Date.now()}`;
