@@ -4,6 +4,19 @@
 
   let products: any[] = [];
 
+  const categories = [
+    { id: 'cat-1',  code: 'MIE',  name: 'Mie & Makanan Instan' },
+    { id: 'cat-2',  code: 'BSK',  name: 'Biskuit & Roti' },
+    { id: 'cat-3',  code: 'SNK',  name: 'Camilan & Snack' },
+    { id: 'cat-4',  code: 'AIR',  name: 'Air Mineral & Isotonik' },
+    { id: 'cat-5',  code: 'MIN',  name: 'Minuman Kemasan & Susu' },
+    { id: 'cat-6',  code: 'DPR',  name: 'Bumbu & Kebutuhan Dapur' },
+    { id: 'cat-7',  code: 'SBN',  name: 'Sabun & Perawatan Tubuh' },
+    { id: 'cat-8',  code: 'KBR',  name: 'Kebutuhan Kebersihan Rumah' },
+    { id: 'cat-9',  code: 'BAY',  name: 'Kebutuhan Ibu & Bayi' },
+    { id: 'cat-10', code: 'RMH',  name: 'Perlengkapan Rumah Tangga' },
+  ];
+
   onMount(async () => {
     try {
       const res = await fetch('/api/products').then(r => r.json());
@@ -39,6 +52,7 @@
     sku: '',
     name: '',
     category: 'Mie & Makanan Instan',
+    categoryId: 'cat-1',
     costPrice: 0,
     sellPrice: 0,
     stock: 0,
@@ -50,17 +64,45 @@
 
   let isSkuTouched = false;
 
+  function getCategoryCode(categoryId: string) {
+    return categories.find(c => c.id === categoryId)?.code || 'PRD';
+  }
+
+  function generateSku() {
+    if (isSkuTouched) return;
+    form.sku = form.name
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '')
+      .trim()
+      .split(/\s+/)
+      .join('-')
+      .slice(0, 20);
+  }
+
   function handleNameInput() {
-    if (!editingId && !isSkuTouched) {
-      form.sku = form.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 20);
-    }
+    if (!editingId) generateSku();
+  }
+
+  function handleCategoryChange() {
+    // Kategori berubah tidak mengubah SKU jika user menginginkan SKU murni dari nama produk
   }
 
   function openCreateModal() {
     editingId = null;
     uploadError = '';
     isSkuTouched = false;
-    form = { barcode: `899${Math.floor(100000000 + Math.random() * 900000000)}`, sku: '', name: '', category: 'Mie & Makanan Instan', costPrice: 0, sellPrice: 0, stock: 0, unit: 'pcs', imageUrl: '' };
+    form = {
+      barcode: `899${Math.floor(100000000 + Math.random() * 900000000)}`,
+      sku: '',
+      name: '',
+      category: 'Mie & Makanan Instan',
+      categoryId: 'cat-1',
+      costPrice: 0,
+      sellPrice: 0,
+      stock: 0,
+      unit: 'pcs',
+      imageUrl: ''
+    };
     showModal = true;
   }
 
@@ -98,12 +140,19 @@
       return;
     }
 
-    const finalSku = form.sku ? form.sku.toUpperCase() : (form.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 20) || `SKU-${Date.now()}`);
+    const finalSku = form.sku ? form.sku.toUpperCase() : (
+      form.name
+        .toUpperCase()
+        .replace(/[^A-Z0-9\s]/g, '')
+        .trim()
+        .split(/\s+/)
+        .join('-')
+        .slice(0, 20) || `SKU-${Date.now()}`
+    );
 
     isSaving = true;
     try {
       if (editingId) {
-        // Update produk ke database
         const res = await fetch(`/api/products/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -111,6 +160,7 @@
             barcode: form.barcode,
             sku: finalSku,
             name: form.name,
+            categoryId: form.categoryId || null,
             costPrice: Number(form.costPrice),
             sellPrice: Number(form.sellPrice),
             stock: Number(form.stock),
@@ -121,13 +171,13 @@
 
         if (res.success) {
           const updatedImageUrl = res.data?.imageUrl !== undefined ? (res.data.imageUrl || '') : form.imageUrl;
-          products = products.map(p => p.id === editingId ? { ...p, ...form, sku: finalSku, imageUrl: updatedImageUrl } : p);
+          const catName = categories.find(c => c.id === form.categoryId)?.name || form.category;
+          products = products.map(p => p.id === editingId ? { ...p, ...form, sku: finalSku, category: catName, imageUrl: updatedImageUrl } : p);
         } else {
           alert('Gagal mengupdate produk: ' + (res.message || 'Unknown error'));
           return;
         }
       } else {
-        // Tambah produk baru ke database
         const res = await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -135,7 +185,7 @@
             barcode: form.barcode,
             sku: finalSku,
             name: form.name,
-            categoryId: null,
+            categoryId: form.categoryId || null,
             costPrice: Number(form.costPrice),
             sellPrice: Number(form.sellPrice),
             stock: Number(form.stock),
@@ -145,10 +195,12 @@
         }).then(r => r.json());
 
         if (res.success) {
+          const catName = categories.find(c => c.id === form.categoryId)?.name || form.category;
           const newProductData = {
             id: res.data?.id || `prod-${Date.now()}`,
             ...form,
             sku: res.data?.sku || finalSku,
+            category: catName,
             imageUrl: res.data?.imageUrl || form.imageUrl || ''
           };
           products = [...products, newProductData];
@@ -276,13 +328,22 @@
             <input type="text" bind:value={form.barcode} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono" />
           </div>
           <div>
-            <label class="text-slate-600 font-bold">Kode SKU (Opsional)</label>
+            <label class="text-slate-600 font-bold">Kode SKU</label>
             <input type="text" bind:value={form.sku} on:input={() => isSkuTouched = true} placeholder="Otomatis dari nama produk" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1 font-mono uppercase" />
           </div>
         </div>
         <div>
           <label class="text-slate-600 font-bold">Nama Produk</label>
           <input type="text" bind:value={form.name} on:input={handleNameInput} placeholder="Contoh: Indomie Goreng Spesial 85g" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
+        </div>
+        <div>
+          <label class="text-slate-600 font-bold">Kategori</label>
+          <select bind:value={form.categoryId} on:change={handleCategoryChange} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1">
+            {#each categories as cat}
+              <option value={cat.id}>{cat.code} — {cat.name}</option>
+            {/each}
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1">SKU otomatis: [{getCategoryCode(form.categoryId)}]-[MERK]-[VARIAN]</p>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
