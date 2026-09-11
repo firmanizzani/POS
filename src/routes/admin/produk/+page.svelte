@@ -76,7 +76,7 @@
       .trim()
       .split(/\s+/)
       .join('-')
-      .slice(0, 20);
+      .slice(0, 50);
   }
 
   function handleNameInput() {
@@ -147,7 +147,7 @@
         .trim()
         .split(/\s+/)
         .join('-')
-        .slice(0, 20) || `SKU-${Date.now()}`
+        .slice(0, 50) || `SKU-${Date.now()}`
     );
 
     isSaving = true;
@@ -342,8 +342,7 @@
             {#each categories as cat}
               <option value={cat.id}>{cat.code} — {cat.name}</option>
             {/each}
-          </select>
-          <p class="text-[10px] text-slate-400 mt-1">SKU otomatis: [{getCategoryCode(form.categoryId)}]-[MERK]-[VARIAN]</p>
+
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
