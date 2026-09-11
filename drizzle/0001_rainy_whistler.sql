@@ -1,0 +1,1 @@
+ALTER TABLE "products" ALTER COLUMN "sku" SET DATA TYPE varchar(20);
