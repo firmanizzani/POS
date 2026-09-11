@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { UserCog, Plus, Edit3, Trash2, X, Eye, EyeOff, ShieldCheck, User } from 'lucide-svelte';
   import { authStore } from '$lib/stores/authStore';
 
@@ -11,15 +12,11 @@
     createdAt: string;
   }
 
-  let accounts: Account[] = [
-    { id: 'user-admin-1', name: 'Super Admin', email: 'admin@minimarket.com', pinCode: '123456', role: 'admin', createdAt: '2026-09-01' },
-    { id: 'user-kasir-1', name: 'Ahmad Kasir', email: 'ahmad@minimarket.com', pinCode: '111111', role: 'cashier', createdAt: '2026-09-01' },
-    { id: 'user-kasir-2', name: 'Budi Kasir', email: 'budi@minimarket.com', pinCode: '222222', role: 'cashier', createdAt: '2026-09-05' }
-  ];
-
+  let accounts: Account[] = [];
   let showModal = false;
   let showPin = false;
   let editingId: string | null = null;
+  let isSaving = false;
 
   let form = {
     name: '',
@@ -29,6 +26,17 @@
   };
 
   let formError = '';
+
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/users').then(r => r.json());
+      if (res?.success && Array.isArray(res.data)) {
+        accounts = res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load users from API', e);
+    }
+  });
 
   function openCreate() {
     editingId = null;
@@ -44,7 +52,7 @@
     showModal = true;
   }
 
-  function saveAccount() {
+  async function saveAccount() {
     formError = '';
     if (!form.name || !form.email || !form.pinCode) {
       formError = 'Nama, email, dan PIN wajib diisi!';
@@ -61,31 +69,59 @@
       return;
     }
 
-    if (editingId) {
-      accounts = accounts.map((a) =>
-        a.id === editingId ? { ...a, ...form } : a
-      );
-    } else {
-      accounts = [
-        ...accounts,
-        {
-          id: `user-${Date.now()}`,
-          ...form,
-          createdAt: new Date().toISOString().slice(0, 10)
+    isSaving = true;
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/users/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form)
+        }).then(r => r.json());
+
+        if (res?.success) {
+          accounts = accounts.map((a) => (a.id === editingId ? { ...a, ...form } : a));
+          showModal = false;
+        } else {
+          formError = res?.message || 'Gagal memperbarui akun';
         }
-      ];
+      } else {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form)
+        }).then(r => r.json());
+
+        if (res?.success && res.data) {
+          accounts = [...accounts, res.data];
+          showModal = false;
+        } else {
+          formError = res?.message || 'Gagal membuat akun';
+        }
+      }
+    } catch (e: any) {
+      formError = 'Error: ' + e.message;
+    } finally {
+      isSaving = false;
     }
-    showModal = false;
   }
 
-  function deleteAccount(id: string) {
+  async function deleteAccount(id: string) {
     // Prevent deleting own account
     if ($authStore?.id === id) {
       alert('Anda tidak dapat menghapus akun Anda sendiri!');
       return;
     }
     if (confirm('Yakin ingin menghapus akun ini? Tindakan ini tidak dapat dibatalkan.')) {
-      accounts = accounts.filter((a) => a.id !== id);
+      try {
+        const res = await fetch(`/api/users/${id}`, { method: 'DELETE' }).then(r => r.json());
+        if (res?.success) {
+          accounts = accounts.filter((a) => a.id !== id);
+        } else {
+          alert('Gagal menghapus akun: ' + res?.message);
+        }
+      } catch (e: any) {
+        alert('Error hapus akun: ' + e.message);
+      }
     }
   }
 </script>
@@ -283,9 +319,10 @@
 
       <button
         on:click={saveAccount}
-        class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20"
+        disabled={isSaving}
+        class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20"
       >
-        {editingId ? 'SIMPAN PERUBAHAN AKUN' : 'BUAT AKUN SEKARANG'}
+        {isSaving ? 'MENYIMPAN...' : (editingId ? 'SIMPAN PERUBAHAN AKUN' : 'BUAT AKUN SEKARANG')}
       </button>
     </div>
   </div>
