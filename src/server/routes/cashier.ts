@@ -53,38 +53,38 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       console.warn('DB cashierShifts error, fallback to memoryStore:', e.message);
     }
 
-    // Map DB shifts and memoryStore shifts into unified list
     const shiftMap = new Map<string, any>();
 
-    // Process memoryStore shifts first
     for (const ms of memoryStore.shifts) {
       shiftMap.set(ms.id, { ...ms });
     }
 
-    // Overlay DB shifts
     for (const s of shiftsFromDb) {
       const existing = shiftMap.get(s.id) || {};
+      const dbStartingCash = s.startingCash !== null && s.startingCash !== undefined ? Number(s.startingCash) : null;
+      const dbExpectedCash = s.expectedCash !== null && s.expectedCash !== undefined ? Number(s.expectedCash) : null;
+      const dbActualCash = s.actualCash !== null && s.actualCash !== undefined ? Number(s.actualCash) : null;
+
       shiftMap.set(s.id, {
         ...existing,
         id: s.id,
         userId: s.userId,
         cashierName: s.cashierName || userMap.get(s.userId) || existing.cashierName || 'Kasir',
         clockIn: s.clockIn ? new Date(s.clockIn).toISOString() : (existing.clockIn || new Date().toISOString()),
-        clockOut: s.clockOut ? new Date(s.clockOut).toISOString() : existing.clockOut || null,
-        startingCash: s.startingCash !== null && s.startingCash !== undefined ? Number(s.startingCash) : (existing.startingCash ?? 200000),
-        expectedCash: s.expectedCash !== null && s.expectedCash !== undefined ? Number(s.expectedCash) : existing.expectedCash,
-        actualCash: s.actualCash !== null && s.actualCash !== undefined ? Number(s.actualCash) : existing.actualCash,
+        clockOut: s.clockOut ? new Date(s.clockOut).toISOString() : (s.status === 'closed' ? existing.clockOut : null),
+        startingCash: dbStartingCash !== null ? dbStartingCash : (existing.startingCash ?? 200000),
+        expectedCash: dbExpectedCash !== null ? dbExpectedCash : existing.expectedCash,
+        actualCash: dbActualCash !== null ? dbActualCash : existing.actualCash,
         notes: s.notes || existing.notes || '',
-        status: s.status || existing.status || 'open'
+        status: s.status === 'closed' ? 'closed' : (s.status || existing.status || 'open')
       });
     }
 
     const resultList: any[] = [];
     for (const [id, rawShift] of shiftMap.entries()) {
-      const start = Number(rawShift.startingCash || 200000);
+      const start = Number(rawShift.startingCash || 0);
       const withdrawals = Number(rawShift.withdrawalsTotal || 0);
 
-      // Compute total cash transactions for this shift
       const shiftClockIn = rawShift.clockIn ? new Date(rawShift.clockIn).getTime() : 0;
       const shiftClockOut = rawShift.clockOut ? new Date(rawShift.clockOut).getTime() : Infinity;
 
@@ -104,18 +104,16 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
 
       const expectedCash = start + salesCash - withdrawals;
 
-      const isClosed = rawShift.status === 'closed' || !!rawShift.clockOut;
+      const isClosed = rawShift.status === 'closed' || (rawShift.status !== 'open' && !!rawShift.clockOut);
       const status = isClosed ? 'closed' : 'open';
 
       const clockOut = rawShift.clockOut
         ? new Date(rawShift.clockOut).toISOString()
-        : (isClosed ? new Date().toISOString() : null);
+        : null;
 
       let actualCash: number | null = null;
-      if (rawShift.actualCash !== null && rawShift.actualCash !== undefined) {
+      if (rawShift.actualCash !== null && rawShift.actualCash !== undefined && !isNaN(Number(rawShift.actualCash))) {
         actualCash = Number(rawShift.actualCash);
-      } else if (isClosed) {
-        actualCash = rawShift.expectedCash !== null && rawShift.expectedCash !== undefined ? Number(rawShift.expectedCash) : expectedCash;
       }
 
       let difference: number | null = null;
@@ -142,7 +140,6 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       });
     }
 
-    // Sort newest shift first
     resultList.sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime());
 
     return {
@@ -156,50 +153,157 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     const userId = query.userId || 'user-kasir-1';
     const cashier = memoryStore.users.find(u => u.id === userId) || { id: userId, name: 'Kasir' };
 
-    let activeShift: any = memoryStore.shifts.find((s: any) => s.userId === userId && s.status === 'open');
+    let activeShiftFromDb: any = null;
+    try {
+      const dbShifts = await db.select({
+        id: cashierShifts.id,
+        userId: cashierShifts.userId,
+        clockIn: cashierShifts.clockIn,
+        clockOut: cashierShifts.clockOut,
+        startingCash: cashierShifts.startingCash,
+        expectedCash: cashierShifts.expectedCash,
+        actualCash: cashierShifts.actualCash,
+        notes: cashierShifts.notes,
+        status: cashierShifts.status
+      }).from(cashierShifts);
 
-    if (!activeShift) {
-      // Carry over ending cash balance from latest shift or default to 200,000
-      const closedShifts = memoryStore.shifts.filter((s: any) => s.status === 'closed');
-      const latestShift: any = closedShifts[0] || memoryStore.shifts[0];
-      let startingCash = 200000;
-      if (latestShift) {
-        if (latestShift.actualCash !== null && latestShift.actualCash !== undefined) {
-          startingCash = Number(latestShift.actualCash);
-        } else if (latestShift.expectedCash !== null && latestShift.expectedCash !== undefined) {
-          startingCash = Number(latestShift.expectedCash);
-        }
+      const openDbShift = dbShifts.find(s => s.userId === userId && s.status === 'open');
+      if (openDbShift) {
+        activeShiftFromDb = openDbShift;
       }
 
-      let maxShiftNum = 1000;
-      const allShiftIds = memoryStore.shifts.map((s: any) => s.id);
-      const numShiftIds = allShiftIds.map((id: string) => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter((n: number) => !isNaN(n));
-      if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
-      const nextShiftNum = maxShiftNum + 1;
+      for (const dbS of dbShifts) {
+        const memShift = memoryStore.shifts.find((ms: any) => ms.id === dbS.id);
+        if (memShift) {
+          memShift.status = dbS.status;
+          memShift.clockOut = dbS.clockOut ? new Date(dbS.clockOut).toISOString() : memShift.clockOut;
+          memShift.startingCash = dbS.startingCash ? Number(dbS.startingCash) : memShift.startingCash;
+          memShift.expectedCash = dbS.expectedCash ? Number(dbS.expectedCash) : memShift.expectedCash;
+          memShift.actualCash = dbS.actualCash !== null && dbS.actualCash !== undefined ? Number(dbS.actualCash) : memShift.actualCash;
+        }
+      }
+    } catch (e: any) {
+      console.warn('DB shift sync error in /shift/active:', e.message);
+    }
 
-      const now = new Date();
+    let computedSalesCash = 0;
+    if (activeShiftFromDb) {
+      try {
+        const shiftTrxs = await db.select({
+          grandTotal: transactions.grandTotal,
+          paymentMethod: transactions.paymentMethod,
+          shiftId: transactions.shiftId
+        }).from(transactions).catch(() => []);
+
+        for (const t of shiftTrxs) {
+          const method = (t.paymentMethod || '').toUpperCase();
+          if (method !== 'CASH') continue;
+          if (t.shiftId === activeShiftFromDb.id) {
+            computedSalesCash += Number(t.grandTotal || 0);
+          }
+        }
+      } catch (e: any) {
+        const memShift = memoryStore.shifts.find((s: any) => s.id === activeShiftFromDb.id);
+        if (memShift) computedSalesCash = Number(memShift.salesCash || 0);
+      }
+    }
+
+    let activeShift: any = null;
+
+    if (activeShiftFromDb) {
+      const startingCash = Number(activeShiftFromDb.startingCash || 0);
+      const memShift: any = memoryStore.shifts.find((s: any) => s.id === activeShiftFromDb.id);
+      const withdrawalsTotal = Number(memShift?.withdrawalsTotal || 0);
+
       activeShift = {
-        id: `shift-${nextShiftNum}`,
-        userId: cashier.id,
+        id: activeShiftFromDb.id,
+        userId: activeShiftFromDb.userId,
         cashierName: cashier.name,
-        clockIn: now.toISOString(),
+        clockIn: activeShiftFromDb.clockIn ? new Date(activeShiftFromDb.clockIn).toISOString() : new Date().toISOString(),
         clockOut: null,
-        startingCash: startingCash,
-        salesCash: 0,
-        withdrawalsTotal: 0,
-        expectedCash: startingCash,
+        startingCash,
+        salesCash: computedSalesCash,
+        withdrawalsTotal,
+        withdrawalsHistory: memShift?.withdrawalsHistory || [],
+        expectedCash: startingCash + computedSalesCash - withdrawalsTotal,
         actualCash: null,
         difference: null,
-        notes: `Shift ${cashier.name} Berjalan`,
+        notes: activeShiftFromDb.notes || `Shift ${cashier.name} Berjalan`,
         status: 'open'
       };
 
-      memoryStore.shifts.unshift(activeShift);
+      if (memShift) {
+        memShift.salesCash = computedSalesCash;
+        memShift.expectedCash = activeShift.expectedCash;
+        memShift.cashierName = cashier.name;
+      }
     } else {
-      activeShift.cashierName = cashier.name;
-    }
+      const memActiveShift: any = memoryStore.shifts.find((s: any) => s.userId === userId && s.status === 'open');
 
-    await syncMemoryStoreToDb().catch(() => {});
+      if (memActiveShift) {
+        activeShift = { ...memActiveShift, cashierName: cashier.name };
+      } else {
+        let startingCash = 200000;
+        try {
+          const allDbShifts = await db.select({
+            id: cashierShifts.id,
+            actualCash: cashierShifts.actualCash,
+            expectedCash: cashierShifts.expectedCash,
+            status: cashierShifts.status,
+            clockOut: cashierShifts.clockOut
+          }).from(cashierShifts);
+
+          const closedDbShifts = allDbShifts.filter(s => s.status === 'closed');
+          closedDbShifts.sort((a, b) => new Date(b.clockOut || 0).getTime() - new Date(a.clockOut || 0).getTime());
+          const lastClosed = closedDbShifts[0];
+          if (lastClosed) {
+            if (lastClosed.actualCash !== null && lastClosed.actualCash !== undefined) {
+              startingCash = Number(lastClosed.actualCash);
+            } else if (lastClosed.expectedCash !== null && lastClosed.expectedCash !== undefined) {
+              startingCash = Number(lastClosed.expectedCash);
+            }
+          }
+        } catch (e: any) {
+          const closedShifts = memoryStore.shifts.filter((s: any) => s.status === 'closed');
+          const latestShift: any = closedShifts[0];
+          if (latestShift) {
+            if (latestShift.actualCash !== null && latestShift.actualCash !== undefined) {
+              startingCash = Number(latestShift.actualCash);
+            } else if (latestShift.expectedCash !== null && latestShift.expectedCash !== undefined) {
+              startingCash = Number(latestShift.expectedCash);
+            }
+          }
+        }
+
+        let maxShiftNum = 1000;
+        const dbShiftIds = await db.select({ id: cashierShifts.id }).from(cashierShifts).catch(() => []);
+        const allShiftIds = [...dbShiftIds.map(s => s.id), ...memoryStore.shifts.map((s: any) => s.id)];
+        const numShiftIds = allShiftIds.map((id: string) => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter((n: number) => !isNaN(n));
+        if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
+        const nextShiftNum = maxShiftNum + 1;
+
+        const now = new Date();
+        activeShift = {
+          id: `shift-${nextShiftNum}`,
+          userId: cashier.id,
+          cashierName: cashier.name,
+          clockIn: now.toISOString(),
+          clockOut: null,
+          startingCash,
+          salesCash: 0,
+          withdrawalsTotal: 0,
+          withdrawalsHistory: [],
+          expectedCash: startingCash,
+          actualCash: null,
+          difference: null,
+          notes: `Shift ${cashier.name} Berjalan`,
+          status: 'open'
+        };
+
+        memoryStore.shifts.unshift(activeShift);
+        await syncMemoryStoreToDb().catch(() => {});
+      }
+    }
 
     return {
       success: true,
