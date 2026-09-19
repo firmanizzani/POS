@@ -298,6 +298,21 @@ export async function seedDatabase() {
       await db.insert(stockAdjustments).values(adj).onConflictDoNothing();
     }
 
+    // Seed Cashier Shifts
+    for (const s of initialShifts) {
+      await db.insert(cashierShifts).values({
+        id: s.id,
+        userId: s.userId,
+        clockIn: new Date(s.clockIn),
+        clockOut: s.clockOut ? new Date(s.clockOut) : null,
+        startingCash: s.startingCash.toString(),
+        expectedCash: s.expectedCash ? s.expectedCash.toString() : null,
+        actualCash: s.actualCash !== null && s.actualCash !== undefined ? s.actualCash.toString() : null,
+        notes: s.notes || '',
+        status: s.status || 'open'
+      }).onConflictDoNothing();
+    }
+
     // Seed Transactions
     for (const trx of initialTransactions) {
       const { items, ...trxData } = trx;

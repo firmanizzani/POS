@@ -329,11 +329,11 @@
               <td class="p-3 font-mono font-bold text-sky-700">{s.id}</td>
               <td class="p-3 font-bold text-slate-900">{s.cashierName}</td>
               <td class="p-3 text-slate-500 font-mono text-[11px]">{new Date(s.clockIn).toLocaleString('id-ID')}</td>
-              <td class="p-3 text-slate-500 font-mono text-[11px]">{s.clockOut ? new Date(s.clockOut).toLocaleString('id-ID') : '-'}</td>
+              <td class="p-3 text-slate-500 font-mono text-[11px]">{s.clockOut ? new Date(s.clockOut).toLocaleString('id-ID') : (s.status === 'closed' ? 'Selesai' : 'Shift Aktif')}</td>
               <td class="p-3 text-right font-mono">{formatRp(s.startingCash || 0)}</td>
               <td class="p-3 text-right font-mono text-emerald-700 font-semibold">{formatRp(s.salesCash || 0)}</td>
               <td class="p-3 text-right font-mono font-bold text-slate-900">{formatRp(s.expectedCash || 0)}</td>
-              <td class="p-3 text-right font-mono font-bold text-sky-700">{s.actualCash !== null ? formatRp(s.actualCash) : '-'}</td>
+              <td class="p-3 text-right font-mono font-bold text-sky-700">{s.actualCash !== null && s.actualCash !== undefined ? formatRp(s.actualCash) : (s.status === 'closed' ? formatRp(s.expectedCash || 0) : 'Belum Input')}</td>
               <td class="p-3 text-center">
                 {#if s.difference === 0}
                   <span class="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-bold text-[10px] border border-emerald-200">
@@ -347,8 +347,12 @@
                   <span class="px-2.5 py-0.5 bg-red-50 text-red-700 rounded-full font-bold text-[10px] border border-red-200">
                     {formatRp(s.difference)}
                   </span>
+                {:else if s.status === 'closed'}
+                  <span class="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-bold text-[10px] border border-emerald-200">
+                    IMPAS (Rp 0)
+                  </span>
                 {:else}
-                  <span class="text-slate-400">-</span>
+                  <span class="text-slate-400 font-mono text-[11px]">Shift Aktif</span>
                 {/if}
               </td>
               <td class="p-3 text-center">
