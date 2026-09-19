@@ -1,11 +1,12 @@
 import { Elysia } from 'elysia';
 import { db } from '../db/index.js';
 import { transactions, transactionItems, users } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { memoryStore } from '../db/store.js';
 
 export const transactionRoutes = new Elysia({ prefix: '/transactions' })
   .get('/', async () => {
+    let dbTrxList: any[] = [];
     try {
       const trxs = await db.select({
         id: transactions.id,
@@ -21,7 +22,8 @@ export const transactionRoutes = new Elysia({ prefix: '/transactions' })
         createdAt: transactions.createdAt
       })
       .from(transactions)
-      .leftJoin(users, eq(transactions.cashierId, users.id));
+      .leftJoin(users, eq(transactions.cashierId, users.id))
+      .orderBy(desc(transactions.createdAt));
 
       if (trxs.length > 0) {
         const items = await db.select().from(transactionItems);
@@ -35,25 +37,30 @@ export const transactionRoutes = new Elysia({ prefix: '/transactions' })
           });
         }
 
-        return {
-          success: true,
-          data: trxs.map(t => {
-            const trxItems = itemMap.get(t.id) || [];
-            return {
-              invoiceNumber: t.invoiceNumber,
-              date: formatDateTime(t.createdAt),
-              cashierName: t.cashierName || 'Kasir',
-              itemsCount: trxItems.reduce((acc, i) => acc + i.qty, 0),
-              subtotal: Number(t.subtotal),
-              discount: Number(t.discountTotal),
-              grandTotal: Number(t.grandTotal),
-              paidAmount: Number(t.paidAmount),
-              changeAmount: Number(t.changeAmount),
-              paymentMethod: t.paymentMethod.toUpperCase(),
-              items: trxItems
-            };
-          })
-        };
+        const userMap = new Map(memoryStore.users.map(u => [u.id, u.name]));
+        const memberMap = new Map(memoryStore.members.map((m: any) => [m.id, `${m.name} (${m.memberCode || m.code || ''})`]));
+        const promoMap = new Map(memoryStore.promos.map(p => [p.id, p.code]));
+
+        dbTrxList = trxs.map(t => {
+          const trxItems = itemMap.get(t.id) || [];
+          const memTrx: any = memoryStore.transactions.find((m: any) => m.id === t.id || m.invoiceNumber === t.invoiceNumber);
+          return {
+            invoiceNumber: t.invoiceNumber,
+            date: formatDateTime(t.createdAt),
+            cashierName: t.cashierName || userMap.get(t.cashierId) || 'Kasir',
+            memberName: memTrx?.memberId ? memberMap.get(memTrx.memberId) || 'Member' : null,
+            promoCode: memTrx?.promoCode || (memTrx?.promoId ? promoMap.get(memTrx.promoId) : null) || null,
+            earnedPoints: memTrx?.earnedPoints || 0,
+            itemsCount: trxItems.reduce((acc, i) => acc + i.qty, 0),
+            subtotal: Number(t.subtotal),
+            discount: Number(t.discountTotal),
+            grandTotal: Number(t.grandTotal),
+            paidAmount: Number(t.paidAmount),
+            changeAmount: Number(t.changeAmount),
+            paymentMethod: t.paymentMethod.toUpperCase(),
+            items: trxItems
+          };
+        });
       }
     } catch (e: any) {
       console.warn('DB transactions error, fallback to memoryStore:', e.message);
@@ -63,7 +70,7 @@ export const transactionRoutes = new Elysia({ prefix: '/transactions' })
     const memberMap = new Map(memoryStore.members.map((m: any) => [m.id, `${m.name} (${m.memberCode || m.code || ''})`]));
     const promoMap = new Map(memoryStore.promos.map(p => [p.id, p.code]));
 
-    const data = memoryStore.transactions.map((t: any) => ({
+    const memTrxList = memoryStore.transactions.map((t: any) => ({
       invoiceNumber: t.invoiceNumber,
       date: formatDateTime(t.createdAt),
       cashierName: userMap.get(t.cashierId) || 'Ahmad Kasir',
@@ -84,7 +91,16 @@ export const transactionRoutes = new Elysia({ prefix: '/transactions' })
       }))
     }));
 
-    return { success: true, data };
+    // Merge transactions by invoiceNumber to guarantee nothing is missed
+    const existingInvoices = new Set(dbTrxList.map(t => t.invoiceNumber));
+    const mergedList = [...dbTrxList];
+    for (const memTrx of memTrxList) {
+      if (!existingInvoices.has(memTrx.invoiceNumber)) {
+        mergedList.push(memTrx);
+      }
+    }
+
+    return { success: true, data: mergedList.length > 0 ? mergedList : memTrxList };
   });
 
 function formatDateTime(date: Date) {

@@ -352,6 +352,7 @@
             id: i.id,
             name: i.name,
             sellPrice: i.sellPrice,
+            costPrice: i.costPrice || 0,
             quantity: i.quantity,
             subtotal: i.sellPrice * i.quantity
           })),

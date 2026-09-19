@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { FileText, Search, Printer, Download, Eye, Filter, X, Clock, CheckCircle, AlertTriangle, Wallet } from 'lucide-svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import { FileText, Search, Printer, Download, Eye, Filter, X, Clock, CheckCircle, AlertTriangle, Wallet, RefreshCw } from 'lucide-svelte';
 
   let activeTab: 'transactions' | 'shifts' = 'transactions';
   let transactions: any[] = [];
@@ -9,8 +9,11 @@
   let selectedMethod = 'ALL';
   let selectedTrx: any = null;
   let showDetailModal = false;
+  let isRefreshing = false;
+  let intervalId: any;
 
-  onMount(async () => {
+  async function loadData() {
+    isRefreshing = true;
     try {
       const res = await fetch('/api/transactions').then(r => r.json());
       if (res?.success && Array.isArray(res.data)) {
@@ -27,7 +30,18 @@
       }
     } catch (e) {
       console.warn('Failed to load shifts', e);
+    } finally {
+      isRefreshing = false;
     }
+  }
+
+  onMount(() => {
+    loadData();
+    intervalId = setInterval(loadData, 4000);
+  });
+
+  onDestroy(() => {
+    if (intervalId) clearInterval(intervalId);
   });
 
   $: filteredTransactions = transactions.filter((t) => {
@@ -154,12 +168,19 @@
       <p class="text-xs text-slate-500 mt-1">Daftar struk penjualan, laporan rekap kas laci, dan audit selisih shift kasir</p>
     </div>
 
-    {#if activeTab === 'transactions'}
-      <button on:click={exportAllTransactionsXLSX} class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
-        <Download class="w-4 h-4 text-sky-600" />
-        <span>EXPORT ALL TRANSACTIONS (.XLSX)</span>
+    <div class="flex items-center space-x-2">
+      <button on:click={loadData} class="px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm transition-colors">
+        <RefreshCw class="w-3.5 h-3.5 text-sky-600 {isRefreshing ? 'animate-spin' : ''}" />
+        <span>SEGARKAN</span>
       </button>
-    {/if}
+
+      {#if activeTab === 'transactions'}
+        <button on:click={exportAllTransactionsXLSX} class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
+          <Download class="w-4 h-4 text-sky-600" />
+          <span>EXPORT ALL TRANSACTIONS (.XLSX)</span>
+        </button>
+      {/if}
+    </div>
   </div>
 
   <!-- Navigation Tabs -->

@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
-import { cashierShifts, users } from '../db/schema.js';
+import { cashierShifts, users, transactions, transactionItems, products, members } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { memoryStore } from '../db/store.js';
 
@@ -190,10 +190,11 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     })
   })
 
-  // Checkout Transaction — Simpan ke memoryStore + update shift omset + update member points
-  .post('/checkout', ({ body }: { body: any }) => {
+  // Checkout Transaction — Simpan ke DB & memoryStore + update shift omset + update member points + potong stok
+  .post('/checkout', async ({ body }: { body: any }) => {
     let maxTrxNum = 0;
-    const allTrxIds = memoryStore.transactions.map((t: any) => t.id);
+    const dbTrxs = await db.select({ id: transactions.id }).from(transactions).catch(() => []);
+    const allTrxIds = [...dbTrxs.map(t => t.id), ...memoryStore.transactions.map((t: any) => t.id)];
     const numTrxIds = allTrxIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
     if (numTrxIds.length > 0) maxTrxNum = Math.max(...numTrxIds);
     const nextTrxNum = maxTrxNum + 1;
@@ -234,17 +235,36 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         transactionId: trxId,
         productId: item.id,
         productName: item.name,
-        costPrice: '0',
+        costPrice: (item.costPrice || 0).toString(),
         sellPrice: item.sellPrice.toString(),
         quantity: item.quantity,
-        subtotal: item.subtotal.toString()
+        subtotal: (item.subtotal || item.sellPrice * item.quantity).toString()
       }))
     };
 
-    // Simpan ke memoryStore
+    // 1. Simpan ke memoryStore
     memoryStore.transactions.unshift(newTrx);
 
-    // Update omset tunai di shift aktif
+    // 2. Potong stok produk di memoryStore & DB
+    for (const item of (body.items || [])) {
+      const memProd = memoryStore.products.find(p => p.id === item.id || p.barcode === item.barcode);
+      if (memProd) {
+        memProd.stock = Math.max(0, memProd.stock - item.quantity);
+      }
+      try {
+        if (item.id) {
+          const dbProd = await db.select({ stock: products.stock }).from(products).where(eq(products.id, item.id));
+          if (dbProd.length > 0) {
+            const newStock = Math.max(0, dbProd[0].stock - item.quantity);
+            await db.update(products).set({ stock: newStock }).where(eq(products.id, item.id));
+          }
+        }
+      } catch (e: any) {
+        console.warn('Failed to update DB product stock:', e.message);
+      }
+    }
+
+    // 3. Update omset tunai di shift aktif (memoryStore & DB)
     if (body.paymentMethod === 'CASH') {
       const shift = body.shiftId
         ? memoryStore.shifts.find(s => s.id === body.shiftId)
@@ -252,18 +272,93 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       if (shift) {
         shift.salesCash = (shift.salesCash || 0) + body.grandTotal;
         shift.expectedCash = (shift.startingCash || 0) + shift.salesCash;
+
+        try {
+          await db.update(cashierShifts)
+            .set({ expectedCash: shift.expectedCash.toString() })
+            .where(eq(cashierShifts.id, shift.id));
+        } catch (e: any) {
+          console.warn('Failed to update DB shift cash:', e.message);
+        }
       }
     }
 
-    // Update poin member jika ada
+    // 4. Update poin member jika ada (memoryStore & DB)
     if (body.memberId && body.earnedPoints > 0) {
       const member = memoryStore.members.find(m => m.id === body.memberId);
       if (member) {
         member.points = (member.points || 0) + body.earnedPoints;
-        // Naik tier otomatis
         if (member.points >= 500) member.tier = 'GOLD';
         else if (member.points >= 200) member.tier = 'SILVER';
+
+        try {
+          await db.update(members)
+            .set({ points: member.points, tier: member.tier.toLowerCase() })
+            .where(eq(members.id, member.id));
+        } catch (e: any) {
+          console.warn('Failed to update DB member points:', e.message);
+        }
       }
+    }
+
+    // 5. Simpan ke PostgreSQL DB (transactions & transaction_items)
+    try {
+      let dbShiftId = null;
+      if (body.shiftId) {
+        const checkShift = await db.select({ id: cashierShifts.id }).from(cashierShifts).where(eq(cashierShifts.id, body.shiftId));
+        if (checkShift.length > 0) dbShiftId = body.shiftId;
+      }
+
+      let dbMemberId = null;
+      if (body.memberId) {
+        const checkMember = await db.select({ id: members.id }).from(members).where(eq(members.id, body.memberId));
+        if (checkMember.length > 0) dbMemberId = body.memberId;
+      }
+
+      let dbCashierId = 'user-kasir-1';
+      if (body.cashierId) {
+        const checkUser = await db.select({ id: users.id }).from(users).where(eq(users.id, body.cashierId));
+        if (checkUser.length > 0) dbCashierId = body.cashierId;
+      }
+
+      await db.insert(transactions).values({
+        id: trxId,
+        invoiceNumber,
+        cashierId: dbCashierId,
+        shiftId: dbShiftId,
+        memberId: dbMemberId,
+        promoId: promoId,
+        subtotal: body.subtotal.toString(),
+        discountTotal: (body.discountTotal || 0).toString(),
+        grandTotal: body.grandTotal.toString(),
+        paidAmount: body.paidAmount.toString(),
+        changeAmount: (body.paidAmount - body.grandTotal).toString(),
+        paymentMethod: body.paymentMethod.toLowerCase(),
+        earnedPoints: body.earnedPoints || 0,
+        createdAt: now
+      });
+
+      for (const item of newTrx.items) {
+        let dbProdId = item.productId;
+        const checkProd = await db.select({ id: products.id }).from(products).where(eq(products.id, item.productId));
+        if (checkProd.length === 0) {
+          const firstProd = await db.select({ id: products.id }).from(products).limit(1);
+          if (firstProd.length > 0) dbProdId = firstProd[0].id;
+        }
+
+        await db.insert(transactionItems).values({
+          id: item.id,
+          transactionId: trxId,
+          productId: dbProdId,
+          productName: item.productName,
+          costPrice: item.costPrice,
+          sellPrice: item.sellPrice,
+          quantity: item.quantity,
+          subtotal: item.subtotal
+        });
+      }
+    } catch (e: any) {
+      console.warn('DB insert checkout transaction error:', e.message);
     }
 
     return {

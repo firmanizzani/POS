@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import {
     TrendingUp,
     DollarSign,
@@ -7,12 +7,17 @@
     Award,
     AlertTriangle,
     ArrowUpRight,
-    Download
+    Download,
+    RefreshCw
   } from 'lucide-svelte';
 
   export let data: any;
 
-  $: analytics = data?.analytics || {
+  let localAnalytics = data?.analytics;
+  let isRefreshing = false;
+  let intervalId: any;
+
+  $: analytics = localAnalytics || data?.analytics || {
     totalOmset: 0,
     netProfit: 0,
     totalTransactions: 0,
@@ -20,6 +25,29 @@
     topProducts: [],
     lowStockAlerts: []
   };
+
+  async function fetchLatestAnalytics() {
+    isRefreshing = true;
+    try {
+      const res = await fetch('/api/analytics/dashboard').then(r => r.json());
+      if (res?.success && res.data) {
+        localAnalytics = res.data;
+      }
+    } catch (e) {
+      console.warn('Failed to refresh analytics dashboard', e);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+
+  onMount(() => {
+    fetchLatestAnalytics();
+    intervalId = setInterval(fetchLatestAnalytics, 4000);
+  });
+
+  onDestroy(() => {
+    if (intervalId) clearInterval(intervalId);
+  });
 
   function formatRp(val: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -42,16 +70,15 @@
       [],
       ['TOP SELLING PRODUCTS (PRODUK TERLARIS)'],
       ['Nama Produk', 'Kategori', 'Jumlah Terjual (pcs)', 'Total Pendapatan (Rp)'],
-      ...analytics.topProducts.map(tp => [tp.name, tp.category, tp.soldQty, tp.revenue]),
+      ...analytics.topProducts.map((tp: any) => [tp.name, tp.category, tp.soldQty, tp.revenue]),
       [],
       ['PERINGATAN STOK MENIPIS'],
       ['Nama Produk', 'Kategori', 'Sisa Stok (pcs)', 'Batas Alert Limit (pcs)'],
-      ...analytics.lowStockAlerts.map(ls => [ls.name, ls.category, ls.stock, ls.minAlert])
+      ...analytics.lowStockAlerts.map((ls: any) => [ls.name, ls.category, ls.stock, ls.minAlert])
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
 
-    // Hitung lebar kolom otomatis berdasarkan konten terpanjang
     const colWidths: number[] = [];
     rows.forEach(row => {
       row.forEach((cell, colIdx) => {
@@ -72,13 +99,20 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-900 tracking-wide">Dashboard Analitik Minimarket</h1>
-      <p class="text-xs text-slate-500 mt-1">Ringkasan performa penjualan, profit bersih, dan stok barang</p>
+      <p class="text-xs text-slate-500 mt-1">Ringkasan performa penjualan, profit bersih, dan stok barang (Tersinkronisasi Realtime)</p>
     </div>
 
-    <button on:click={exportDashboardReport} class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
-      <Download class="w-4 h-4 text-sky-600" />
-      <span>EXPORT LAPORAN (EXCEL/CSV)</span>
-    </button>
+    <div class="flex items-center space-x-2">
+      <button on:click={fetchLatestAnalytics} class="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm transition-colors">
+        <RefreshCw class="w-3.5 h-3.5 text-sky-600 {isRefreshing ? 'animate-spin' : ''}" />
+        <span>SEGARKAN</span>
+      </button>
+
+      <button on:click={exportDashboardReport} class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
+        <Download class="w-4 h-4 text-sky-600" />
+        <span>EXPORT LAPORAN (EXCEL/CSV)</span>
+      </button>
+    </div>
   </div>
 
   <!-- Key Metrics Cards -->
