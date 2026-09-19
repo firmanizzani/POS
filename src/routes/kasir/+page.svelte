@@ -94,13 +94,33 @@
     memberPointDiscount.set(redeemPointsInput);
   }
 
-  // Sync Shift Store with logged in user from authStore
+  // Sync Active Shift from Backend for logged in user
+  let activeSyncUserId = '';
+  async function syncActiveShift(user: any) {
+    if (!user || !user.id || activeSyncUserId === user.id) return;
+    activeSyncUserId = user.id;
+    try {
+      const res = await fetch(`/api/cashier/shift/active?userId=${user.id}`).then(r => r.json());
+      if (res?.success && res.data) {
+        const s = res.data;
+        shiftStore.set({
+          isClockedIn: s.status === 'open',
+          shiftId: s.id,
+          cashierId: user.id,
+          cashierName: user.name,
+          startingCash: Number(s.startingCash || 200000),
+          salesCash: Number(s.salesCash || 0),
+          withdrawalsTotal: Number(s.withdrawalsTotal || 0),
+          clockInTime: s.clockIn
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to sync active shift', e);
+    }
+  }
+
   $: if ($authStore) {
-    shiftStore.update((s) => ({
-      ...s,
-      cashierId: $authStore.id,
-      cashierName: $authStore.name
-    }));
+    syncActiveShift($authStore);
   }
 
   // Promo Code State

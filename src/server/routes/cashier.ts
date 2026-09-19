@@ -51,20 +51,91 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       console.warn('DB cashierShifts error, fallback to memoryStore:', e.message);
     }
 
+    const userMap = new Map(memoryStore.users.map(u => [u.id, u.name]));
+    const shiftsWithNames = memoryStore.shifts.map((s: any) => ({
+      ...s,
+      cashierName: userMap.get(s.userId) || s.cashierName || 'Kasir'
+    }));
+
     return {
       success: true,
-      data: memoryStore.shifts
+      data: shiftsWithNames
+    };
+  })
+
+  // Get or Sync Active Shift for logged-in user with carry-over drawer cash
+  .get('/shift/active', async ({ query }: { query: { userId?: string } }) => {
+    const userId = query.userId || 'user-kasir-1';
+    const cashier = memoryStore.users.find(u => u.id === userId) || { id: userId, name: 'Kasir' };
+
+    let activeShift: any = memoryStore.shifts.find((s: any) => s.userId === userId && s.status === 'open');
+
+    if (!activeShift) {
+      // Carry over ending cash balance from latest shift
+      const latestShift: any = memoryStore.shifts[0];
+      let startingCash = 200000;
+      if (latestShift) {
+        if (latestShift.actualCash !== null && latestShift.actualCash !== undefined) {
+          startingCash = Number(latestShift.actualCash);
+        } else if (latestShift.expectedCash !== null && latestShift.expectedCash !== undefined) {
+          startingCash = Number(latestShift.expectedCash);
+        }
+      }
+
+      let maxShiftNum = 1000;
+      const allShiftIds = memoryStore.shifts.map((s: any) => s.id);
+      const numShiftIds = allShiftIds.map((id: string) => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter((n: number) => !isNaN(n));
+      if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
+      const nextShiftNum = maxShiftNum + 1;
+
+      const now = new Date();
+      activeShift = {
+        id: `shift-${nextShiftNum}`,
+        userId: cashier.id,
+        cashierName: cashier.name,
+        clockIn: now.toISOString(),
+        clockOut: null,
+        startingCash: startingCash,
+        salesCash: 0,
+        withdrawalsTotal: 0,
+        expectedCash: startingCash,
+        actualCash: null,
+        difference: null,
+        notes: `Shift ${cashier.name} Berjalan`,
+        status: 'open'
+      };
+
+      memoryStore.shifts.unshift(activeShift);
+    } else {
+      activeShift.cashierName = cashier.name;
+    }
+
+    return {
+      success: true,
+      data: activeShift
     };
   })
 
   // Shift Management: Clock-In (Kas Awal)
   .post('/shift/clock-in', async ({ body }: { body: any }) => {
-    const cashier = memoryStore.users.find(u => u.id === body.cashierId) || { name: 'Ahmad Kasir' };
+    const cashier = memoryStore.users.find(u => u.id === body.cashierId) || { name: 'Kasir' };
+
+    let startingCash = Number(body.startingCash || 0);
+    if (startingCash <= 0) {
+      const latestShift: any = memoryStore.shifts[0];
+      if (latestShift) {
+        startingCash = latestShift.actualCash !== null && latestShift.actualCash !== undefined
+          ? Number(latestShift.actualCash)
+          : Number(latestShift.expectedCash || 200000);
+      } else {
+        startingCash = 200000;
+      }
+    }
 
     let maxShiftNum = 1000;
     const dbShifts = await db.select({ id: cashierShifts.id }).from(cashierShifts).catch(() => []);
-    const allShiftIds = [...dbShifts.map(s => s.id), ...memoryStore.shifts.map(s => s.id)];
-    const numShiftIds = allShiftIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    const allShiftIds = [...dbShifts.map(s => s.id), ...memoryStore.shifts.map((s: any) => s.id)];
+    const numShiftIds = allShiftIds.map((id: string) => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter((n: number) => !isNaN(n));
     if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
     const nextShiftNum = maxShiftNum + 1;
 
@@ -77,10 +148,10 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       cashierName: cashier.name,
       clockIn: now.toISOString(),
       clockOut: null,
-      startingCash: Number(body.startingCash),
+      startingCash: startingCash,
       salesCash: 0,
       withdrawalsTotal: 0,
-      expectedCash: Number(body.startingCash),
+      expectedCash: startingCash,
       actualCash: null,
       difference: null,
       notes: body.notes || 'Shift Aktif',
@@ -92,8 +163,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         id: shiftId,
         userId: body.cashierId,
         clockIn: now,
-        startingCash: body.startingCash.toString(),
-        expectedCash: body.startingCash.toString(),
+        startingCash: startingCash.toString(),
+        expectedCash: startingCash.toString(),
         notes: body.notes || 'Shift Aktif',
         status: 'open'
       });
@@ -111,7 +182,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   }, {
     body: t.Object({
       cashierId: t.String(),
-      startingCash: t.Number(),
+      startingCash: t.Optional(t.Number()),
       notes: t.Optional(t.String())
     })
   })
