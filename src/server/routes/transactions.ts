@@ -2,10 +2,12 @@ import { Elysia } from 'elysia';
 import { db } from '../db/index.js';
 import { transactions, transactionItems, users } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
-import { memoryStore } from '../db/store.js';
+import { memoryStore, syncMemoryStoreToDb } from '../db/store.js';
 
 export const transactionRoutes = new Elysia({ prefix: '/transactions' })
   .get('/', async () => {
+    // Auto-sync any offline transactions to DB if DB is connected
+    await syncMemoryStoreToDb().catch(() => {});
     let dbTrxList: any[] = [];
     try {
       const trxs = await db.select({
