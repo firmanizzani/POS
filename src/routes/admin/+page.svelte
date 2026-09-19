@@ -159,6 +159,10 @@
     profitGradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
     profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
 
+    const isSingleDay = chartPoints.length <= 1;
+    const barThicknessVal = isSingleDay ? 36 : undefined;
+    const maxBarThicknessVal = isSingleDay ? 42 : 18;
+
     chartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -169,16 +173,20 @@
             data: omsetData,
             backgroundColor: '#0ea5e9',
             borderRadius: 6,
-            barPercentage: 0.6,
-            categoryPercentage: 0.7
+            barThickness: barThicknessVal,
+            maxBarThickness: maxBarThicknessVal,
+            barPercentage: 0.5,
+            categoryPercentage: 0.6
           },
           {
             label: 'Profit Bersih (Net)',
             data: profitData,
             backgroundColor: '#10b981',
             borderRadius: 6,
-            barPercentage: 0.6,
-            categoryPercentage: 0.7
+            barThickness: barThicknessVal,
+            maxBarThickness: maxBarThicknessVal,
+            barPercentage: 0.5,
+            categoryPercentage: 0.6
           }
         ]
       },
