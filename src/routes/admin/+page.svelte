@@ -283,144 +283,135 @@
 </script>
 
 <div class="space-y-6">
-  <!-- Header -->
-  <div class="flex items-center justify-between">
+  <!-- Header & Period Filter (Compact Integrated Bar) -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 tracking-wide">Dashboard Analitik Minimarket</h1>
-      <p class="text-xs text-slate-500 mt-1">Ringkasan performa penjualan, profit bersih, dan stok barang</p>
+      <h1 class="text-xl font-bold text-slate-900 tracking-wide">Dashboard Analitik</h1>
+      <p class="text-[11px] text-slate-500 mt-0.5">Ringkasan performa penjualan, profit bersih, dan stok barang</p>
     </div>
 
-    <div class="flex items-center space-x-2">
-      <button on:click={fetchLatestAnalytics} class="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm transition-colors">
-        <RefreshCw class="w-3.5 h-3.5 text-sky-600 {isRefreshing ? 'animate-spin' : ''}" />
-        <span>SEGARKAN</span>
-      </button>
-
-      <button on:click={exportDashboardReport} class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-2 shadow-sm transition-colors">
-        <Download class="w-4 h-4 text-sky-600" />
-        <span>EXPORT LAPORAN (EXCEL)</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ── Period Filter Bar ─────────────────────────────────────────────── -->
-  <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
-    <div class="flex items-center space-x-2 mb-1">
-      <Calendar class="w-4 h-4 text-sky-600" />
-      <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Filter Periode Penghasilan</span>
-    </div>
-
-    <!-- Quick period buttons -->
-    <div class="flex flex-wrap gap-2">
-      {#each (['daily', 'weekly', 'monthly', 'yearly', 'custom'] as Period[]) as p}
-        <button
-          on:click={() => onPeriodChange(p)}
-          class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-colors
-            {selectedPeriod === p
-              ? 'bg-sky-600 text-white border-sky-600 shadow-md shadow-sky-200'
-              : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}"
-        >
-          {PERIOD_LABELS[p]}
-        </button>
-      {/each}
-    </div>
-
-    <!-- Custom date range (shown only when selectedPeriod === 'custom') -->
-    {#if selectedPeriod === 'custom'}
-      <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-100">
-        <div>
-          <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">Dari Tanggal</p>
-          <input type="date" bind:value={customFrom} max={customTo}
-            class="px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-900 bg-white focus:outline-none focus:border-sky-500" />
-        </div>
-        <div>
-          <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase">Sampai Tanggal</p>
-          <input type="date" bind:value={customTo} min={customFrom} max={todayStr}
-            class="px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-900 bg-white focus:outline-none focus:border-sky-500" />
-        </div>
-        <button on:click={onCustomApply}
-          class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-sm">
-          Tampilkan
-        </button>
+    <!-- Period Filter Buttons & Action Buttons -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+        {#each (['daily', 'weekly', 'monthly', 'yearly', 'custom'] as Period[]) as p}
+          <button
+            on:click={() => onPeriodChange(p)}
+            class="px-3 py-1 rounded-lg text-xs font-bold transition-all
+              {selectedPeriod === p
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'}"
+          >
+            {PERIOD_LABELS[p]}
+          </button>
+        {/each}
       </div>
-    {/if}
+
+      <button on:click={fetchLatestAnalytics} title="Segarkan" class="p-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl shadow-sm transition-colors">
+        <RefreshCw class="w-4 h-4 text-sky-600 {isRefreshing ? 'animate-spin' : ''}" />
+      </button>
+
+      <button on:click={exportDashboardReport} class="px-3 py-2 bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-700 text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm transition-colors">
+        <Download class="w-4 h-4 text-sky-600" />
+        <span class="hidden sm:inline">EXPORT EXCEL</span>
+      </button>
+    </div>
   </div>
+
+  <!-- Custom date range dropdown inline (shown only when selectedPeriod === 'custom') -->
+  {#if selectedPeriod === 'custom'}
+    <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex flex-wrap items-center gap-3">
+      <div>
+        <span class="text-[10px] text-slate-500 font-bold uppercase mr-1">Dari:</span>
+        <input type="date" bind:value={customFrom} max={customTo}
+          class="px-2.5 py-1 border border-slate-300 rounded-lg text-xs text-slate-900 bg-white focus:outline-none focus:border-sky-500" />
+      </div>
+      <div>
+        <span class="text-[10px] text-slate-500 font-bold uppercase mr-1">Sampai:</span>
+        <input type="date" bind:value={customTo} min={customFrom} max={todayStr}
+          class="px-2.5 py-1 border border-slate-300 rounded-lg text-xs text-slate-900 bg-white focus:outline-none focus:border-sky-500" />
+      </div>
+      <button on:click={onCustomApply}
+        class="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg shadow-sm">
+        Tampilkan
+      </button>
+    </div>
+  {/if}
 
   <!-- ── Revenue Summary Cards (filtered by period) ──────────────────── -->
   {#if revenueData}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <!-- Omset -->
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
+      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
         <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Total Omset</span>
-          <div class="p-2 bg-sky-50 text-sky-600 rounded-xl"><TrendingUp class="w-5 h-5" /></div>
+          <span class="text-[11px] font-bold uppercase tracking-wide">Total Omset</span>
+          <div class="p-1.5 bg-sky-50 text-sky-600 rounded-lg"><TrendingUp class="w-4 h-4" /></div>
         </div>
-        <div class="text-2xl font-black text-slate-900">{formatRp(revenueData.totalOmset)}</div>
-        <p class="text-[11px] text-slate-500 font-semibold">{PERIOD_LABELS[selectedPeriod]}</p>
+        <div class="text-xl font-black text-slate-900">{formatRp(revenueData.totalOmset)}</div>
+        <p class="text-[10px] text-slate-500 font-semibold">{PERIOD_LABELS[selectedPeriod]}</p>
       </div>
 
       <!-- Profit -->
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
+      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
         <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Profit Bersih</span>
-          <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><DollarSign class="w-5 h-5" /></div>
+          <span class="text-[11px] font-bold uppercase tracking-wide">Profit Bersih</span>
+          <div class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><DollarSign class="w-4 h-4" /></div>
         </div>
-        <div class="text-2xl font-black text-emerald-600">{formatRp(revenueData.netProfit)}</div>
-        <p class="text-[11px] text-emerald-600 font-semibold">
+        <div class="text-xl font-black text-emerald-600">{formatRp(revenueData.netProfit)}</div>
+        <p class="text-[10px] text-emerald-600 font-semibold">
           {revenueData.totalOmset > 0 ? ((revenueData.netProfit / revenueData.totalOmset) * 100).toFixed(1) : 0}% margin
         </p>
       </div>
 
       <!-- Transaksi -->
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
+      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
         <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Total Transaksi</span>
-          <div class="p-2 bg-purple-50 text-purple-600 rounded-xl"><ShoppingBag class="w-5 h-5" /></div>
+          <span class="text-[11px] font-bold uppercase tracking-wide">Total Transaksi</span>
+          <div class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><ShoppingBag class="w-4 h-4" /></div>
         </div>
-        <div class="text-2xl font-black text-slate-900">{revenueData.totalTransactions}</div>
-        <p class="text-[11px] text-slate-500 font-semibold">struk</p>
+        <div class="text-xl font-black text-slate-900">{revenueData.totalTransactions}</div>
+        <p class="text-[10px] text-slate-500 font-semibold">struk</p>
       </div>
 
       <!-- Avg Order -->
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
+      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
         <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Rata-rata Basket</span>
-          <div class="p-2 bg-amber-50 text-amber-600 rounded-xl"><Award class="w-5 h-5" /></div>
+          <span class="text-[11px] font-bold uppercase tracking-wide">Rata-rata Basket</span>
+          <div class="p-1.5 bg-amber-50 text-amber-600 rounded-lg"><Award class="w-4 h-4" /></div>
         </div>
-        <div class="text-2xl font-black text-amber-600">{formatRp(revenueData.averageOrderValue)}</div>
-        <p class="text-[11px] text-slate-500 font-semibold">per pelanggan</p>
+        <div class="text-xl font-black text-amber-600">{formatRp(revenueData.averageOrderValue)}</div>
+        <p class="text-[10px] text-slate-500 font-semibold">per pelanggan</p>
       </div>
     </div>
 
     <!-- ── Bar Chart ─────────────────────────────────────────────────────── -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
       <div class="flex items-center justify-between">
-        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
-          <BarChart2 class="w-5 h-5 text-sky-500" />
+        <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+          <BarChart2 class="w-4 h-4 text-sky-500" />
           <span>Grafik Pendapatan — {PERIOD_LABELS[selectedPeriod]}</span>
         </h2>
-        <div class="flex items-center space-x-4 text-[10px] font-bold">
-          <span class="flex items-center space-x-1"><span class="inline-block w-3 h-3 rounded bg-sky-500"></span><span class="text-slate-500">Omset</span></span>
-          <span class="flex items-center space-x-1"><span class="inline-block w-3 h-3 rounded bg-emerald-400"></span><span class="text-slate-500">Profit</span></span>
+        <div class="flex items-center space-x-3 text-[10px] font-bold">
+          <span class="flex items-center space-x-1"><span class="inline-block w-2.5 h-2.5 rounded bg-sky-500"></span><span class="text-slate-500">Omset</span></span>
+          <span class="flex items-center space-x-1"><span class="inline-block w-2.5 h-2.5 rounded bg-emerald-400"></span><span class="text-slate-500">Profit</span></span>
         </div>
       </div>
 
       {#if isLoadingRevenue}
-        <div class="flex items-center justify-center h-64 text-slate-400 text-sm font-medium">Memuat grafik pendapatan...</div>
+        <div class="flex items-center justify-center h-52 text-slate-400 text-xs font-medium">Memuat grafik pendapatan...</div>
       {:else if chartPoints.length === 0}
-        <div class="flex items-center justify-center h-64 text-slate-400 text-sm font-medium">Tidak ada transaksi di periode ini</div>
+        <div class="flex items-center justify-center h-52 text-slate-400 text-xs font-medium">Tidak ada transaksi di periode ini</div>
       {:else}
-        <div class="relative w-full h-72">
+        <div class="relative w-full h-56 sm:h-60">
           <canvas bind:this={canvasEl}></canvas>
         </div>
 
         <!-- Summary row below chart -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 pt-3 border-t border-slate-100">
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 pt-2 border-t border-slate-100">
           {#each chartPoints.slice(-7) as d}
-            <div class="text-center p-2 rounded-xl bg-slate-50 border border-slate-100">
-              <p class="text-[10px] text-slate-500 font-mono font-bold">{shortDate(d.date, chartPoints.length)}</p>
-              <p class="text-xs font-black text-sky-600 mt-0.5">{formatRpShort(d.omset)}</p>
-              <p class="text-[10px] text-emerald-600 font-bold">{formatRpShort(d.profit)} profit</p>
+            <div class="text-center p-1.5 rounded-lg bg-slate-50 border border-slate-100">
+              <p class="text-[9px] text-slate-500 font-mono font-bold">{shortDate(d.date, chartPoints.length)}</p>
+              <p class="text-[11px] font-black text-sky-600 mt-0.5">{formatRpShort(d.omset)}</p>
+              <p class="text-[9px] text-emerald-600 font-bold">{formatRpShort(d.profit)} profit</p>
             </div>
           {/each}
         </div>
