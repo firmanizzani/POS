@@ -160,37 +160,25 @@
     profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
 
     chartInstance = new Chart(ctx, {
-      type: 'line',
+      type: 'bar',
       data: {
         labels,
         datasets: [
           {
             label: 'Omset (Gross)',
             data: omsetData,
-            borderColor: '#0ea5e9',
-            backgroundColor: omsetGradient,
-            borderWidth: 3,
-            fill: true,
-            tension: 0.35,
-            pointBackgroundColor: '#0ea5e9',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 7
+            backgroundColor: '#0ea5e9',
+            borderRadius: 6,
+            barPercentage: 0.6,
+            categoryPercentage: 0.7
           },
           {
             label: 'Profit Bersih (Net)',
             data: profitData,
-            borderColor: '#10b981',
-            backgroundColor: profitGradient,
-            borderWidth: 3,
-            fill: true,
-            tension: 0.35,
-            pointBackgroundColor: '#10b981',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 7
+            backgroundColor: '#10b981',
+            borderRadius: 6,
+            barPercentage: 0.6,
+            categoryPercentage: 0.7
           }
         ]
       },

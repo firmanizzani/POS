@@ -95,7 +95,19 @@ async function getDashboardData(dateFrom: Date | null, dateTo: Date | null) {
     const filteredItems = dateFrom && dateTo
       ? allItems.filter(i => trxIds.includes(i.transactionId))
       : allItems;
-    const totalCost = filteredItems.reduce((acc, i) => acc + (Number(i.costPrice || 0) * i.quantity), 0);
+
+    // Fetch product catalog for costPrice fallback if historical item costPrice is 0
+    const dbProds = await db.select({ id: products.id, name: products.name, costPrice: products.costPrice }).from(products);
+    const prodCostMap = new Map(dbProds.map(p => [p.id, Number(p.costPrice || 0)]));
+    const prodNameCostMap = new Map(dbProds.map(p => [p.name, Number(p.costPrice || 0)]));
+
+    const totalCost = filteredItems.reduce((acc, i) => {
+      let cost = Number(i.costPrice || 0);
+      if (cost === 0) {
+        cost = prodCostMap.get(i.productId || '') || prodNameCostMap.get(i.productName || '') || (Number(i.sellPrice || 0) * 0.8);
+      }
+      return acc + (cost * i.quantity);
+    }, 0);
     const netProfit = totalOmset - totalCost;
     const averageOrderValue = totalTransactions > 0 ? Math.round(totalOmset / totalTransactions) : 0;
 
@@ -169,6 +181,10 @@ async function getRevenueData(dateFrom: Date, dateTo: Date, period: string) {
 }
 
 function buildRevenueResult(allTrx: any[], itemMap: Map<string, any[]>, dayLabels: string[], dateFrom: Date, dateTo: Date, period: string) {
+  // Build product cost map for historical fallback
+  const prodCostMap = new Map(memoryStore.products.map(p => [p.id, Number(p.costPrice || 0)]));
+  const prodNameCostMap = new Map(memoryStore.products.map(p => [p.name, Number(p.costPrice || 0)]));
+
   // Aggregate by day
   const byDay = new Map<string, { omset: number; profit: number; count: number }>();
   for (const label of dayLabels) {
@@ -183,7 +199,13 @@ function buildRevenueResult(allTrx: any[], itemMap: Map<string, any[]>, dayLabel
     const dayKey = new Date(t.createdAt).toISOString().slice(0, 10);
     const omset = Number(t.grandTotal || 0);
     const items = itemMap.get(t.id) || [];
-    const cost = items.reduce((acc: number, i: any) => acc + (Number(i.costPrice || 0) * Number(i.quantity || 0)), 0);
+    const cost = items.reduce((acc: number, i: any) => {
+      let c = Number(i.costPrice || 0);
+      if (c === 0) {
+        c = prodCostMap.get(i.productId || '') || prodNameCostMap.get(i.productName || i.name || '') || (Number(i.sellPrice || i.price || 0) * 0.8);
+      }
+      return acc + (c * Number(i.quantity || i.qty || 1));
+    }, 0);
     const profit = omset - cost;
 
     const day = byDay.get(dayKey) || { omset: 0, profit: 0, count: 0 };
@@ -276,8 +298,17 @@ function getMemoryStoreAnalytics(dateFrom: Date | null, dateTo: Date | null) {
     .slice(0, 5);
 
   const totalOmset = (filteredTrx as any[]).reduce((acc, t) => acc + Number(t.grandTotal || 0), 0);
+  const prodCostMap = new Map(memoryStore.products.map(p => [p.id, Number(p.costPrice || 0)]));
+  const prodNameCostMap = new Map(memoryStore.products.map(p => [p.name, Number(p.costPrice || 0)]));
+
   const totalCost = (filteredTrx as any[]).reduce((acc, t) => {
-    const itemCost = (t.items || []).reduce((iAcc: number, item: any) => iAcc + (Number(item.costPrice || 0) * Number(item.quantity || 0)), 0);
+    const itemCost = (t.items || []).reduce((iAcc: number, item: any) => {
+      let c = Number(item.costPrice || 0);
+      if (c === 0) {
+        c = prodCostMap.get(item.productId || '') || prodNameCostMap.get(item.productName || item.name || '') || (Number(item.sellPrice || item.price || 0) * 0.8);
+      }
+      return iAcc + (c * Number(item.quantity || item.qty || 1));
+    }, 0);
     return acc + itemCost;
   }, 0);
   const netProfit = totalOmset - totalCost;
