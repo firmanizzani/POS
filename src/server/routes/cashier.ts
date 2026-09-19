@@ -355,8 +355,6 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     };
 
     memoryStore.shifts.unshift(newShift);
-    await syncMemoryStoreToDb().catch(() => {});
-
     return {
       success: true,
       message: 'Clock-In Kasir Berhasil',
@@ -367,6 +365,37 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       cashierId: t.String(),
       startingCash: t.Optional(t.Number()),
       notes: t.Optional(t.String())
+    })
+  })
+
+  // Shift Management: Update Kas Awal (Modal) Shift Aktif
+  .post('/shift/starting-cash', async ({ body }: { body: { shiftId?: string; startingCash: number } }) => {
+    const newStartingCash = Number(body.startingCash || 0);
+    const shift: any = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts.find(s => s.status === 'open');
+    
+    if (shift) {
+      shift.startingCash = newStartingCash;
+      shift.expectedCash = newStartingCash + (shift.salesCash || 0) - (shift.withdrawalsTotal || 0);
+      try {
+        await db.update(cashierShifts)
+          .set({ startingCash: newStartingCash.toString(), expectedCash: shift.expectedCash.toString() })
+          .where(eq(cashierShifts.id, shift.id));
+      } catch (e: any) {
+        console.warn('Failed to update DB starting cash:', e.message);
+      }
+    }
+
+    await syncMemoryStoreToDb().catch(() => {});
+
+    return {
+      success: true,
+      message: 'Kas Awal berhasil diperbarui',
+      data: { startingCash: newStartingCash }
+    };
+  }, {
+    body: t.Object({
+      shiftId: t.Optional(t.String()),
+      startingCash: t.Number()
     })
   })
 

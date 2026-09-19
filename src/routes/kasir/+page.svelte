@@ -140,14 +140,31 @@
   let newStartingCashInput: number = 200000;
   let isEditingStartingCash = false;
 
-  function handleUpdateStartingCash() {
+  async function handleUpdateStartingCash() {
     if (newStartingCashInput < 0) {
       alert('Kas awal tidak boleh negatif!');
       return;
     }
-    shiftStore.update(s => ({ ...s, startingCash: Number(newStartingCashInput) }));
-    isEditingStartingCash = false;
-    alert(`Kas Awal Laci berhasil diperbarui menjadi ${formatRp(newStartingCashInput)}!`);
+    try {
+      const res = await fetch('/api/cashier/shift/starting-cash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shiftId: $shiftStore.shiftId,
+          startingCash: Number(newStartingCashInput)
+        })
+      }).then(r => r.json());
+
+      if (res?.success) {
+        shiftStore.update(s => ({ ...s, startingCash: Number(newStartingCashInput) }));
+        isEditingStartingCash = false;
+        alert(`Kas Awal Laci berhasil diperbarui menjadi ${formatRp(newStartingCashInput)}!`);
+      } else {
+        alert('Gagal memperbarui kas awal: ' + (res?.message || 'Error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    }
   }
 
   async function handleOwnerWithdrawal() {
