@@ -16,6 +16,7 @@
   export let data: any;
 
   let localAnalytics = data?.analytics;
+  let revenueData: any = data?.revenueData || null;
   let isRefreshing = false;
   let intervalId: any;
 
@@ -30,7 +31,6 @@
   let customTo = todayStr;
 
   // Revenue analytics state
-  let revenueData: any = null;
   let isLoadingRevenue = false;
 
   const PERIOD_LABELS: Record<Period, string> = {
@@ -337,123 +337,85 @@
     </div>
   {/if}
 
-  <!-- ── Revenue Summary Cards (filtered by period) ──────────────────── -->
-  {#if revenueData}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      <!-- Omset -->
-      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-[11px] font-bold uppercase tracking-wide">Total Omset</span>
-          <div class="p-1.5 bg-sky-50 text-sky-600 rounded-lg"><TrendingUp class="w-4 h-4" /></div>
-        </div>
-        <div class="text-xl font-black text-slate-900">{formatRp(revenueData.totalOmset)}</div>
-        <p class="text-[10px] text-slate-500 font-semibold">{PERIOD_LABELS[selectedPeriod]}</p>
+  <!-- ── Revenue Summary Cards ──────────────────── -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <!-- Omset -->
+    <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
+      <div class="flex justify-between items-center text-slate-500">
+        <span class="text-[11px] font-bold uppercase tracking-wide">Total Omset</span>
+        <div class="p-1.5 bg-sky-50 text-sky-600 rounded-lg"><TrendingUp class="w-4 h-4" /></div>
       </div>
+      <div class="text-xl font-black text-slate-900">{formatRp(revenueData?.totalOmset ?? analytics.totalOmset)}</div>
+      <p class="text-[10px] text-slate-500 font-semibold">{PERIOD_LABELS[selectedPeriod]}</p>
+    </div>
 
-      <!-- Profit -->
-      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-[11px] font-bold uppercase tracking-wide">Profit Bersih</span>
-          <div class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><DollarSign class="w-4 h-4" /></div>
-        </div>
-        <div class="text-xl font-black text-emerald-600">{formatRp(revenueData.netProfit)}</div>
-        <p class="text-[10px] text-emerald-600 font-semibold">
-          {revenueData.totalOmset > 0 ? ((revenueData.netProfit / revenueData.totalOmset) * 100).toFixed(1) : 0}% margin
-        </p>
+    <!-- Profit -->
+    <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
+      <div class="flex justify-between items-center text-slate-500">
+        <span class="text-[11px] font-bold uppercase tracking-wide">Profit Bersih</span>
+        <div class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><DollarSign class="w-4 h-4" /></div>
       </div>
+      <div class="text-xl font-black text-emerald-600">{formatRp(revenueData?.netProfit ?? analytics.netProfit)}</div>
+      <p class="text-[10px] text-emerald-600 font-semibold">
+        {(revenueData?.totalOmset ?? analytics.totalOmset) > 0 ? (((revenueData?.netProfit ?? analytics.netProfit) / (revenueData?.totalOmset ?? analytics.totalOmset)) * 100).toFixed(1) : 0}% margin
+      </p>
+    </div>
 
-      <!-- Transaksi -->
-      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-[11px] font-bold uppercase tracking-wide">Total Transaksi</span>
-          <div class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><ShoppingBag class="w-4 h-4" /></div>
-        </div>
-        <div class="text-xl font-black text-slate-900">{revenueData.totalTransactions}</div>
-        <p class="text-[10px] text-slate-500 font-semibold">struk</p>
+    <!-- Transaksi -->
+    <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
+      <div class="flex justify-between items-center text-slate-500">
+        <span class="text-[11px] font-bold uppercase tracking-wide">Total Transaksi</span>
+        <div class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><ShoppingBag class="w-4 h-4" /></div>
       </div>
+      <div class="text-xl font-black text-slate-900">{revenueData?.totalTransactions ?? analytics.totalTransactions}</div>
+      <p class="text-[10px] text-slate-500 font-semibold">struk</p>
+    </div>
 
-      <!-- Avg Order -->
-      <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-[11px] font-bold uppercase tracking-wide">Rata-rata Basket</span>
-          <div class="p-1.5 bg-amber-50 text-amber-600 rounded-lg"><Award class="w-4 h-4" /></div>
-        </div>
-        <div class="text-xl font-black text-amber-600">{formatRp(revenueData.averageOrderValue)}</div>
-        <p class="text-[10px] text-slate-500 font-semibold">per pelanggan</p>
+    <!-- Avg Order -->
+    <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1 shadow-sm">
+      <div class="flex justify-between items-center text-slate-500">
+        <span class="text-[11px] font-bold uppercase tracking-wide">Rata-rata Basket</span>
+        <div class="p-1.5 bg-amber-50 text-amber-600 rounded-lg"><Award class="w-4 h-4" /></div>
+      </div>
+      <div class="text-xl font-black text-amber-600">{formatRp(revenueData?.averageOrderValue ?? analytics.averageOrderValue)}</div>
+      <p class="text-[10px] text-slate-500 font-semibold">per pelanggan</p>
+    </div>
+  </div>
+
+  <!-- ── Bar Chart ─────────────────────────────────────────────────────── -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+        <BarChart2 class="w-4 h-4 text-sky-500" />
+        <span>Grafik Pendapatan — {PERIOD_LABELS[selectedPeriod]}</span>
+      </h2>
+      <div class="flex items-center space-x-3 text-[10px] font-bold">
+        <span class="flex items-center space-x-1"><span class="inline-block w-2.5 h-2.5 rounded bg-sky-500"></span><span class="text-slate-500">Omset</span></span>
+        <span class="flex items-center space-x-1"><span class="inline-block w-2.5 h-2.5 rounded bg-emerald-400"></span><span class="text-slate-500">Profit</span></span>
       </div>
     </div>
 
-    <!-- ── Bar Chart ─────────────────────────────────────────────────────── -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
-          <BarChart2 class="w-4 h-4 text-sky-500" />
-          <span>Grafik Pendapatan — {PERIOD_LABELS[selectedPeriod]}</span>
-        </h2>
-        <div class="flex items-center space-x-3 text-[10px] font-bold">
-          <span class="flex items-center space-x-1"><span class="inline-block w-2.5 h-2.5 rounded bg-sky-500"></span><span class="text-slate-500">Omset</span></span>
-          <span class="flex items-center space-x-1"><span class="inline-block w-2.5 h-2.5 rounded bg-emerald-400"></span><span class="text-slate-500">Profit</span></span>
-        </div>
+    {#if isLoadingRevenue}
+      <div class="flex items-center justify-center h-52 text-slate-400 text-xs font-medium">Memuat grafik pendapatan...</div>
+    {:else if chartPoints.length === 0}
+      <div class="flex items-center justify-center h-52 text-slate-400 text-xs font-medium">Tidak ada transaksi di periode ini</div>
+    {:else}
+      <div class="relative w-full h-56 sm:h-60">
+        <canvas bind:this={canvasEl}></canvas>
       </div>
 
-      {#if isLoadingRevenue}
-        <div class="flex items-center justify-center h-52 text-slate-400 text-xs font-medium">Memuat grafik pendapatan...</div>
-      {:else if chartPoints.length === 0}
-        <div class="flex items-center justify-center h-52 text-slate-400 text-xs font-medium">Tidak ada transaksi di periode ini</div>
-      {:else}
-        <div class="relative w-full h-56 sm:h-60">
-          <canvas bind:this={canvasEl}></canvas>
-        </div>
-
-        <!-- Summary row below chart -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 pt-2 border-t border-slate-100">
-          {#each chartPoints.slice(-7) as d}
-            <div class="text-center p-1.5 rounded-lg bg-slate-50 border border-slate-100">
-              <p class="text-[9px] text-slate-500 font-mono font-bold">{shortDate(d.date, chartPoints.length)}</p>
-              <p class="text-[11px] font-black text-sky-600 mt-0.5">{formatRpShort(d.omset)}</p>
-              <p class="text-[9px] text-emerald-600 font-bold">{formatRpShort(d.profit)} profit</p>
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </div>
-  {:else}
-    <!-- Fallback cards saat revenue belum loaded -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Total Omset (Gross)</span>
-          <div class="p-2 bg-sky-50 text-sky-600 rounded-xl"><TrendingUp class="w-5 h-5" /></div>
-        </div>
-        <div class="text-2xl font-black text-slate-900">{formatRp(analytics.totalOmset)}</div>
-        <p class="text-[11px] text-emerald-600 flex items-center font-bold">
-          <ArrowUpRight class="w-3.5 h-3.5 mr-0.5" />
-          <span>Semua Waktu</span>
-        </p>
+      <!-- Summary row below chart -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 pt-2 border-t border-slate-100">
+        {#each chartPoints.slice(-7) as d}
+          <div class="text-center p-1.5 rounded-lg bg-slate-50 border border-slate-100">
+            <p class="text-[9px] text-slate-500 font-mono font-bold">{shortDate(d.date, chartPoints.length)}</p>
+            <p class="text-[11px] font-black text-sky-600 mt-0.5">{formatRpShort(d.omset)}</p>
+            <p class="text-[9px] text-emerald-600 font-bold">{formatRpShort(d.profit)} profit</p>
+          </div>
+        {/each}
       </div>
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Profit Bersih (Net)</span>
-          <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><DollarSign class="w-5 h-5" /></div>
-        </div>
-        <div class="text-2xl font-black text-emerald-600">{formatRp(analytics.netProfit)}</div>
-      </div>
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Total Struk / Transaksi</span>
-          <div class="p-2 bg-purple-50 text-purple-600 rounded-xl"><ShoppingBag class="w-5 h-5" /></div>
-        </div>
-        <div class="text-2xl font-black text-slate-900">{analytics.totalTransactions}</div>
-      </div>
-      <div class="bg-white border border-slate-200 p-5 rounded-2xl space-y-2 shadow-sm">
-        <div class="flex justify-between items-center text-slate-500">
-          <span class="text-xs font-bold uppercase">Rata-rata Basket Size</span>
-          <div class="p-2 bg-amber-50 text-amber-600 rounded-xl"><Award class="w-5 h-5" /></div>
-        </div>
-        <div class="text-2xl font-black text-amber-600">{formatRp(analytics.averageOrderValue)}</div>
-      </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   <!-- Tables Section: Top Products & Low Stock Alerts -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
