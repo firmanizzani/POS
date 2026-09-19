@@ -216,6 +216,19 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     }
 
     const withdrawAmt = Number(body.amount) || 0;
+    const withdrawId = `wd-${Date.now()}`;
+    const withdrawItem = {
+      id: withdrawId,
+      amount: withdrawAmt,
+      notes: body.notes || 'Diambil Owner',
+      timestamp: new Date().toISOString()
+    };
+
+    if (!Array.isArray(shift.withdrawalsHistory)) {
+      shift.withdrawalsHistory = [];
+    }
+    shift.withdrawalsHistory.push(withdrawItem);
+
     shift.withdrawalsTotal = (shift.withdrawalsTotal || 0) + withdrawAmt;
     shift.expectedCash = (shift.startingCash || 0) + (shift.salesCash || 0) - shift.withdrawalsTotal;
     const withdrawNote = `[Pengambilan Owner Rp ${withdrawAmt.toLocaleString('id-ID')}${body.notes ? ': ' + body.notes : ''}]`;
@@ -230,7 +243,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         shiftId: shift.id,
         withdrawAmount: withdrawAmt,
         totalWithdrawals: shift.withdrawalsTotal,
-        expectedCash: shift.expectedCash
+        expectedCash: shift.expectedCash,
+        withdrawalsHistory: shift.withdrawalsHistory
       }
     };
   }, {
@@ -239,6 +253,51 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       amount: t.Number(),
       notes: t.Optional(t.String()),
       withdrawnBy: t.Optional(t.String())
+    })
+  })
+
+  // Shift Management: Cancel / Undo Pengambilan Uang Fisik Owner
+  .post('/shift/withdraw/cancel', async ({ body }: { body: { shiftId: string; withdrawalId: string } }) => {
+    const shift: any = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts.find(s => s.status === 'open');
+    if (!shift) {
+      return { success: false, message: 'Shift aktif tidak ditemukan' };
+    }
+
+    if (!Array.isArray(shift.withdrawalsHistory)) {
+      return { success: false, message: 'Riwayat pengambilan tidak ditemukan' };
+    }
+
+    const index = shift.withdrawalsHistory.findIndex((w: any) => w.id === body.withdrawalId);
+    if (index === -1) {
+      return { success: false, message: 'Data pengambilan owner tidak ditemukan' };
+    }
+
+    const targetWd = shift.withdrawalsHistory[index];
+    const canceledAmt = targetWd.amount;
+
+    // Remove item and recalculate
+    shift.withdrawalsHistory.splice(index, 1);
+    shift.withdrawalsTotal = Math.max(0, (shift.withdrawalsTotal || 0) - canceledAmt);
+    shift.expectedCash = (shift.startingCash || 0) + (shift.salesCash || 0) - shift.withdrawalsTotal;
+    const cancelNote = `[Batal Pengambilan Owner Rp ${canceledAmt.toLocaleString('id-ID')}]`;
+    shift.notes = shift.notes ? `${shift.notes}; ${cancelNote}` : cancelNote;
+
+    await syncMemoryStoreToDb().catch(() => {});
+
+    return {
+      success: true,
+      message: `Pengambilan uang Rp ${canceledAmt.toLocaleString('id-ID')} berhasil dibatalkan!`,
+      data: {
+        shiftId: shift.id,
+        totalWithdrawals: shift.withdrawalsTotal,
+        expectedCash: shift.expectedCash,
+        withdrawalsHistory: shift.withdrawalsHistory
+      }
+    };
+  }, {
+    body: t.Object({
+      shiftId: t.String(),
+      withdrawalId: t.String()
     })
   })
 

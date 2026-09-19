@@ -80,6 +80,15 @@
 
         if (res?.success) {
           accounts = accounts.map((a) => (a.id === editingId ? { ...a, ...form } : a));
+          // Synchronize authStore if currently logged-in user modified their own name/details
+          if ($authStore && $authStore.id === editingId) {
+            authStore.login({
+              ...$authStore,
+              name: form.name,
+              email: form.email,
+              role: form.role
+            });
+          }
           showModal = false;
         } else {
           formError = res?.message || 'Gagal memperbarui akun';

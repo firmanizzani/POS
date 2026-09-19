@@ -111,6 +111,7 @@
           startingCash: Number(s.startingCash || 200000),
           salesCash: Number(s.salesCash || 0),
           withdrawalsTotal: Number(s.withdrawalsTotal || 0),
+          withdrawalsHistory: s.withdrawalsHistory || [],
           clockInTime: s.clockIn
         });
       }
@@ -170,7 +171,8 @@
       if (res?.success) {
         shiftStore.update(s => ({
           ...s,
-          withdrawalsTotal: (s.withdrawalsTotal || 0) + Number(withdrawAmount)
+          withdrawalsTotal: res.data?.totalWithdrawals ?? ((s.withdrawalsTotal || 0) + Number(withdrawAmount)),
+          withdrawalsHistory: res.data?.withdrawalsHistory ?? s.withdrawalsHistory
         }));
         alert(`Berhasil! Uang fisik yang diambil owner sebesar ${formatRp(withdrawAmount)} telah dicatat.\nEkspektasi fisik laci telah disesuaikan.`);
         withdrawAmount = undefined;
@@ -182,6 +184,34 @@
       alert('Error: ' + e.message);
     } finally {
       isWithdrawing = false;
+    }
+  }
+
+  async function handleCancelWithdrawal(withdrawalId: string, amount: number) {
+    if (!confirm(`Batalkan pencatatan pengambilan uang fisik sebesar ${formatRp(amount)}?`)) return;
+
+    try {
+      const res = await fetch('/api/cashier/shift/withdraw/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shiftId: $shiftStore.shiftId || 'shift-1002',
+          withdrawalId
+        })
+      }).then(r => r.json());
+
+      if (res?.success) {
+        shiftStore.update(s => ({
+          ...s,
+          withdrawalsTotal: res.data?.totalWithdrawals ?? Math.max(0, (s.withdrawalsTotal || 0) - amount),
+          withdrawalsHistory: res.data?.withdrawalsHistory ?? (s.withdrawalsHistory || []).filter(w => w.id !== withdrawalId)
+        }));
+        alert(`Berhasil membatalkan pengambilan owner sebesar ${formatRp(amount)}!`);
+      } else {
+        alert('Gagal membatalkan pengambilan: ' + (res?.message || 'Error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
     }
   }
 
@@ -1135,6 +1165,29 @@
         >
           {isWithdrawing ? 'MENCATAT...' : 'CATAT PENGAMBILAN OWNER'}
         </button>
+
+        <!-- Daftar & Opsi Cancel Pengambilan Owner -->
+        {#if $shiftStore.withdrawalsHistory && $shiftStore.withdrawalsHistory.length > 0}
+          <div class="border-t border-amber-200/80 pt-2.5 mt-2 space-y-1.5">
+            <span class="text-[11px] font-bold text-amber-900 block">Riwayat Pengambilan Shift Ini:</span>
+            <div class="space-y-1 max-h-32 overflow-y-auto pr-1">
+              {#each $shiftStore.withdrawalsHistory as item}
+                <div class="flex items-center justify-between bg-white/80 border border-amber-200 px-2.5 py-1.5 rounded-lg text-[11px]">
+                  <div>
+                    <span class="font-bold font-mono text-red-600">-{formatRp(item.amount)}</span>
+                    <span class="text-slate-600 ml-1">({item.notes})</span>
+                  </div>
+                  <button
+                    on:click={() => handleCancelWithdrawal(item.id, item.amount)}
+                    class="px-2 py-0.5 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded text-[10px] transition-colors"
+                  >
+                    Batal
+                  </button>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
 
       <!-- Clock-Out Section -->

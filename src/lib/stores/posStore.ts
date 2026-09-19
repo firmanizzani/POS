@@ -10,6 +10,13 @@ export interface CartItem {
   unit: string;
 }
 
+export interface WithdrawalItem {
+  id: string;
+  amount: number;
+  notes: string;
+  timestamp: string;
+}
+
 export interface ShiftState {
   isClockedIn: boolean;
   shiftId: string | null;
@@ -18,6 +25,7 @@ export interface ShiftState {
   startingCash: number;
   salesCash: number;
   withdrawalsTotal: number;
+  withdrawalsHistory?: WithdrawalItem[];
   clockInTime: string | null;
 }
 
@@ -38,6 +46,7 @@ export const shiftStore = writable<ShiftState>({
   startingCash: 200000,
   salesCash: 0,
   withdrawalsTotal: 0,
+  withdrawalsHistory: [],
   clockInTime: new Date().toISOString()
 });
 
