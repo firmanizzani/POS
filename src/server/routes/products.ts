@@ -63,20 +63,18 @@ export const productRoutes = new Elysia({ prefix: '/products' })
     }
     const id = `prod-${nextIdNum}`;
 
-    // 2. Tentukan Barcode produk berikutnya (+1) jika tidak diisi atau acak
-    let barcode = body.barcode;
-    if (!barcode || barcode.startsWith('899')) {
-      let maxBarcodeNum = 899100000000;
-      const dbBarcodes = await db.select({ barcode: products.barcode }).from(products).catch(() => []);
-      const allBarcodes = [...dbBarcodes.map(p => p.barcode), ...memoryStore.products.map(p => p.barcode)];
-      const numBarcodes = allBarcodes
-        .map(b => parseInt(b, 10))
-        .filter(n => !isNaN(n));
-      if (numBarcodes.length > 0) {
-        maxBarcodeNum = Math.max(...numBarcodes);
-      }
-      barcode = (maxBarcodeNum + 1).toString();
+    // 2. Selalu hitung Barcode produk berikutnya (+1) dari barcode terbesar yang ada
+    let maxBarcodeNum = 899100000000;
+    const dbBarcodes = await db.select({ barcode: products.barcode }).from(products).catch(() => []);
+    const allBarcodes = [...dbBarcodes.map(p => p.barcode), ...memoryStore.products.map(p => p.barcode)];
+    const numBarcodes = allBarcodes
+      .map(b => parseInt(b, 10))
+      .filter(n => !isNaN(n));
+    if (numBarcodes.length > 0) {
+      maxBarcodeNum = Math.max(...numBarcodes);
     }
+    // Jika body.barcode berupa angka unik yang dikirim manual dan valid (bukan barcode default awal yang diisi otomatis), atau kita langsung generate (+1)
+    const barcode = (maxBarcodeNum + 1).toString();
 
     const newProd = {
       id,
