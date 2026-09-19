@@ -66,6 +66,17 @@
     </button>
   </div>
 
+  <!-- Rules Information Banner -->
+  <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between text-xs text-amber-900 shadow-sm">
+    <div class="space-y-0.5">
+      <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800">Aturan Poin Loyalty Minimarket</span>
+      <p class="text-slate-600">
+        • <strong>Perolehan Poin</strong>: Member mendapatkan <strong>0,5% Poin</strong> dari total belanja (misal: Belanja Rp 100.000 = <strong>500 Poin</strong>).<br/>
+        • <strong>Tukar Poin</strong>: <strong>1 Poin = Rp 1 Potongan Uang</strong> (misal: 10.000 Poin = Potongan Rp 10.000 langsung di kasir).
+      </p>
+    </div>
+  </div>
+
   <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
     <table class="w-full text-left text-xs text-slate-700">
       <thead class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200">

@@ -58,6 +58,7 @@ export const cartItems = writable<CartItem[]>([
 ]);
 
 export const selectedMember = writable<any>(null);
+export const memberPointDiscount = writable<number>(0);
 export const appliedPromo = writable<any>(null);
 export const heldCartsStore = writable<HeldCart[]>([]);
 
@@ -66,7 +67,7 @@ export const subtotal = derived(cartItems, ($items) =>
   $items.reduce((acc, item) => acc + item.sellPrice * item.quantity, 0)
 );
 
-export const discountTotal = derived([subtotal, appliedPromo], ([$subtotal, $promo]) => {
+export const promoDiscountTotal = derived([subtotal, appliedPromo], ([$subtotal, $promo]) => {
   if (!$promo) return 0;
   if ($promo.type === 'percentage') {
     return ($subtotal * $promo.value) / 100;
@@ -75,6 +76,10 @@ export const discountTotal = derived([subtotal, appliedPromo], ([$subtotal, $pro
     return $promo.value;
   }
   return 0;
+});
+
+export const discountTotal = derived([promoDiscountTotal, memberPointDiscount], ([$promoDisc, $pointDisc]) => {
+  return $promoDisc + $pointDisc;
 });
 
 export const grandTotal = derived([subtotal, discountTotal], ([$subtotal, $discount]) =>
@@ -118,6 +123,7 @@ export const updateQuantity = (id: string, qty: number) => {
 export const clearCart = () => {
   cartItems.set([]);
   selectedMember.set(null);
+  memberPointDiscount.set(0);
   appliedPromo.set(null);
 };
 

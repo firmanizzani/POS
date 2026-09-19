@@ -283,13 +283,16 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       }
     }
 
-    // 4. Update poin member jika ada (memoryStore & DB)
-    if (body.memberId && body.earnedPoints > 0) {
+    // 4. Update poin member jika ada (penambahan poin belanja & pengurangan poin tukar diskon)
+    if (body.memberId) {
       const member = memoryStore.members.find(m => m.id === body.memberId);
       if (member) {
-        member.points = (member.points || 0) + body.earnedPoints;
+        const earned = body.earnedPoints || 0;
+        const redeemed = body.redeemedPoints || 0;
+        member.points = Math.max(0, (member.points || 0) + earned - redeemed);
         if (member.points >= 500) member.tier = 'GOLD';
         else if (member.points >= 200) member.tier = 'SILVER';
+        else member.tier = 'BRONZE';
 
         try {
           await db.update(members)

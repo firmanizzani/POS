@@ -12,7 +12,8 @@
     discountTotal,
     grandTotal,
     shiftStore,
-    appliedPromo
+    appliedPromo,
+    memberPointDiscount
   } from '$lib/stores/posStore';
   import ThermalReceipt from '$lib/components/ThermalReceipt.svelte';
   import {
@@ -31,7 +32,8 @@
     UserCheck,
     Tag,
     X,
-    CheckCircle2
+    CheckCircle2,
+    Coins
   } from 'lucide-svelte';
 
   let searchQuery = '';
@@ -45,21 +47,53 @@
   let paidAmount = 0;
   let paymentMethod = 'CASH';
   let holdLabel = '';
+  let promoInput = '';
 
   let lastCompletedTransaction: any = null;
 
   // Member & Loyalty State
   let members: any[] = [];
   let selectedMemberId: string = '';
+  let redeemPointsInput: number = 0;
+  let isUsingPointDiscount = false;
   let showAddMemberModal = false;
   let newMemberForm = { name: '', phone: '' };
   let isRegisteringMember = false;
 
   $: selectedMember = members.find((m) => m.id === selectedMemberId);
-  $: earnedPoints = $grandTotal > 0 ? Math.floor($grandTotal / 1000) : 0;
+
+  // Perhitungan Poin: 0,5% dari total belanja = 5 Poin per Rp 1.000 belanja
+  $: earnedPoints = $grandTotal > 0 ? Math.floor(($grandTotal * 0.005)) : 0;
+
+  function toggleRedeemPoints() {
+    if (!selectedMember) return;
+    if (isUsingPointDiscount) {
+      isUsingPointDiscount = false;
+      redeemPointsInput = 0;
+      memberPointDiscount.set(0);
+    } else {
+      if ((selectedMember.points || 0) <= 0) {
+        alert('Member belum memiliki poin untuk ditukarkan!');
+        return;
+      }
+      isUsingPointDiscount = true;
+      // Max points to redeem is member's total points or subtotal amount
+      redeemPointsInput = Math.min(selectedMember.points, $subtotal);
+      memberPointDiscount.set(redeemPointsInput);
+    }
+  }
+
+  function onRedeemPointsChange() {
+    if (!selectedMember) return;
+    const maxVal = Math.min(selectedMember.points || 0, $subtotal);
+    if (redeemPointsInput > maxVal) {
+      redeemPointsInput = maxVal;
+    }
+    if (redeemPointsInput < 0) redeemPointsInput = 0;
+    memberPointDiscount.set(redeemPointsInput);
+  }
 
   // Promo Code State
-  let promoInput = '';
   let promos: any[] = [];
 
   // Shift State
@@ -116,6 +150,15 @@
 
     if (!found) {
       alert('Kode promo tidak valid atau tidak ditemukan!');
+      return;
+    }
+
+    // Validasi Hari Khusus untuk promo JUMAT
+    const isFridayPromo = found.code.includes('JUMAT') || found.title.toUpperCase().includes('JUMAT');
+    const todayDay = new Date().getDay(); // 5 = Friday
+    if (isFridayPromo && todayDay !== 5) {
+      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      alert(`Gagal! Kode promo "${found.code}" khusus berlaku di hari JUMAT.\nHari ini adalah hari ${dayNames[todayDay]}.`);
       return;
     }
 
@@ -339,6 +382,7 @@
     }
 
     const trxEarnedPoints = selectedMember ? earnedPoints : 0;
+    const trxRedeemedPoints = (selectedMember && isUsingPointDiscount) ? $memberPointDiscount : 0;
 
     // Kirim ke API untuk disimpan ke memoryStore / DB
     try {
@@ -363,9 +407,15 @@
           grandTotal: $grandTotal,
           paidAmount: paidAmount,
           paymentMethod: paymentMethod,
-          earnedPoints: trxEarnedPoints
+          earnedPoints: trxEarnedPoints,
+          redeemedPoints: trxRedeemedPoints
         })
       });
+
+      // Update local members array points state
+      if (selectedMember) {
+        selectedMember.points = Math.max(0, (selectedMember.points || 0) + trxEarnedPoints - trxRedeemedPoints);
+      }
     } catch (e) {
       console.warn('Gagal simpan transaksi ke API:', e);
     }
@@ -375,6 +425,7 @@
       cashierName: $shiftStore.cashierName,
       memberName: selectedMember ? `${selectedMember.name} (${selectedMember.code})` : undefined,
       earnedPoints: trxEarnedPoints,
+      redeemedPoints: trxRedeemedPoints,
       promoCode: $appliedPromo?.code,
       promoTitle: $appliedPromo?.title,
       items: [...$cartItems],
@@ -392,6 +443,9 @@
     clearCart();
     paidAmount = 0;
     selectedMemberId = '';
+    isUsingPointDiscount = false;
+    redeemPointsInput = 0;
+    memberPointDiscount.set(0);
     removePromo();
   }
 
@@ -594,9 +648,37 @@
           {/each}
         </select>
         {#if selectedMember}
-          <div class="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-lg p-2 text-[11px] text-amber-800 font-medium">
-            <span>Tier: <strong>{selectedMember.tier || 'BRONZE'}</strong> ({selectedMember.points} pts)</span>
-            <span class="text-emerald-700 font-bold">+{earnedPoints} pts</span>
+          <div class="space-y-1.5 bg-amber-50 border border-amber-200 rounded-xl p-2 text-[11px] text-amber-900">
+            <div class="flex justify-between items-center font-medium">
+              <span>Tier: <strong>{selectedMember.tier || 'BRONZE'}</strong> ({selectedMember.points || 0} pts)</span>
+              <span class="text-emerald-700 font-bold">+{earnedPoints} pts</span>
+            </div>
+
+            <!-- Point Redeem Box -->
+            <div class="pt-1.5 border-t border-amber-200/70 flex items-center justify-between">
+              <button
+                type="button"
+                on:click={toggleRedeemPoints}
+                class="px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all {isUsingPointDiscount ? 'bg-amber-600 text-white shadow-sm' : 'bg-white border border-amber-300 text-amber-800 hover:bg-amber-100'}"
+              >
+                <Coins class="w-3 h-3" />
+                <span>{isUsingPointDiscount ? 'Gunakan Poin (Aktif)' : 'Tukar Poin Diskon'}</span>
+              </button>
+
+              {#if isUsingPointDiscount}
+                <div class="flex items-center space-x-1">
+                  <input
+                    type="number"
+                    bind:value={redeemPointsInput}
+                    on:input={onRedeemPointsChange}
+                    max={Math.min(selectedMember.points || 0, $subtotal)}
+                    min={0}
+                    class="w-16 bg-white border border-amber-300 text-slate-900 text-right px-1.5 py-0.5 rounded text-[11px] font-mono font-bold focus:outline-none"
+                  />
+                  <span class="text-[10px] text-amber-800 font-bold">pts (-{formatRp($memberPointDiscount)})</span>
+                </div>
+              {/if}
+            </div>
           </div>
         {/if}
       </div>
