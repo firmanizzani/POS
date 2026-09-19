@@ -1,6 +1,4 @@
-import type { PageLoad } from './$types';
-
-export const load: PageLoad = async ({ fetch }) => {
+export async function load({ fetch }: { fetch: typeof window.fetch }) {
   try {
     const res = await fetch('/api/analytics/dashboard').then(r => r.json());
     if (res?.success && res.data) {
@@ -16,8 +14,8 @@ export const load: PageLoad = async ({ fetch }) => {
       netProfit: 0,
       totalTransactions: 0,
       averageOrderValue: 0,
-      topProducts: [],
-      lowStockAlerts: []
+      topProducts: [] as any[],
+      lowStockAlerts: [] as any[]
     }
   };
-};
+}
