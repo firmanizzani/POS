@@ -290,8 +290,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         const earned = body.earnedPoints || 0;
         const redeemed = body.redeemedPoints || 0;
         member.points = Math.max(0, (member.points || 0) + earned - redeemed);
-        if (member.points >= 500) member.tier = 'GOLD';
-        else if (member.points >= 200) member.tier = 'SILVER';
+        if (member.points >= 25000) member.tier = 'GOLD';
+        else if (member.points >= 10000) member.tier = 'SILVER';
         else member.tier = 'BRONZE';
 
         try {

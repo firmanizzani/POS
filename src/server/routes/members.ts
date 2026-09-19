@@ -10,26 +10,44 @@ export const memberRoutes = new Elysia({ prefix: '/members' })
       if (list.length > 0) {
         return {
           success: true,
-          data: list.map(m => ({
-            code: m.memberCode,
-            name: m.name,
-            phone: m.phone,
-            points: m.points,
-            tier: m.tier.toUpperCase()
-          }))
+          data: list.map(m => {
+            const pts = Number(m.points || 0);
+            let computedTier = m.tier ? m.tier.toUpperCase() : 'BRONZE';
+            if (pts >= 25000) computedTier = 'GOLD';
+            else if (pts >= 10000) computedTier = 'SILVER';
+            else computedTier = 'BRONZE';
+
+            return {
+              id: m.id,
+              code: m.memberCode,
+              name: m.name,
+              phone: m.phone,
+              points: pts,
+              tier: computedTier
+            };
+          })
         };
       }
     } catch (e: any) {
       console.warn('DB members error, fallback to memoryStore:', e.message);
     }
 
-    const data = memoryStore.members.map(m => ({
-      code: m.memberCode,
-      name: m.name,
-      phone: m.phone,
-      points: m.points,
-      tier: m.tier.toUpperCase()
-    }));
+    const data = memoryStore.members.map(m => {
+      const pts = Number(m.points || 0);
+      let computedTier = m.tier ? m.tier.toUpperCase() : 'BRONZE';
+      if (pts >= 25000) computedTier = 'GOLD';
+      else if (pts >= 10000) computedTier = 'SILVER';
+      else computedTier = 'BRONZE';
+
+      return {
+        id: m.id,
+        code: m.memberCode,
+        name: m.name,
+        phone: m.phone,
+        points: pts,
+        tier: computedTier
+      };
+    });
 
     return { success: true, data };
   })
