@@ -465,7 +465,12 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
 
   // Shift Management: Clock-Out (Rekap Laci)
   .post('/shift/clock-out', async ({ body }: { body: any }) => {
-    const shift: any = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts.find(s => s.status === 'open') || memoryStore.shifts[0];
+    // Priority: 1. find by body.shiftId, 2. find open shift, 3. last shift in memory
+    let shift: any = memoryStore.shifts.find(s => s.id === body.shiftId);
+    if (!shift) {
+      shift = memoryStore.shifts.find(s => s.status === 'open') || memoryStore.shifts[0];
+    }
+
     const clockOutTime = new Date();
     const startingCash = Number(body.startingCash ?? shift?.startingCash ?? 200000);
     const totalSalesCash = Number(body.totalSalesCash ?? shift?.salesCash ?? 0);
@@ -474,7 +479,11 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     const actualCash = Number(body.actualCash);
     const difference = actualCash - expectedCash;
 
+    const currentShiftId = shift?.id || body.shiftId;
+    const currentUserId = shift?.userId || 'user-kasir-1';
+
     if (shift) {
+      shift.id = currentShiftId;
       shift.clockOut = clockOutTime.toISOString();
       shift.startingCash = startingCash;
       shift.salesCash = totalSalesCash;
@@ -485,9 +494,6 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       shift.status = 'closed';
       if (body.notes) shift.notes = body.notes;
     }
-
-    const currentShiftId = shift?.id || body.shiftId;
-    const currentUserId = shift?.userId || 'user-kasir-1';
 
     try {
       await db.insert(cashierShifts).values({
@@ -535,6 +541,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       startingCash: newStartingCash,
       salesCash: 0,
       withdrawalsTotal: 0,
+      withdrawalsHistory: [],
       expectedCash: newStartingCash,
       actualCash: null,
       difference: null,
