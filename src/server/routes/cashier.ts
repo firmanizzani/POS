@@ -100,7 +100,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       });
 
       const computedCashSales = matchingCashTrxs.reduce((sum, t) => sum + Number(t.grandTotal || 0), 0);
-      const salesCash = computedCashSales > 0 ? computedCashSales : Number(rawShift.salesCash || 0);
+      const salesCash = computedCashSales;
 
       const expectedCash = start + salesCash - withdrawals;
 
@@ -115,7 +115,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       if (rawShift.actualCash !== null && rawShift.actualCash !== undefined) {
         actualCash = Number(rawShift.actualCash);
       } else if (isClosed) {
-        actualCash = expectedCash; // Fallback so closed shifts don't have empty actual cash
+        actualCash = rawShift.expectedCash !== null && rawShift.expectedCash !== undefined ? Number(rawShift.expectedCash) : expectedCash;
       }
 
       let difference: number | null = null;
@@ -159,8 +159,9 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     let activeShift: any = memoryStore.shifts.find((s: any) => s.userId === userId && s.status === 'open');
 
     if (!activeShift) {
-      // Carry over ending cash balance from latest shift
-      const latestShift: any = memoryStore.shifts[0];
+      // Carry over ending cash balance from latest shift or default to 200,000
+      const closedShifts = memoryStore.shifts.filter((s: any) => s.status === 'closed');
+      const latestShift: any = closedShifts[0] || memoryStore.shifts[0];
       let startingCash = 200000;
       if (latestShift) {
         if (latestShift.actualCash !== null && latestShift.actualCash !== undefined) {
@@ -212,7 +213,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
 
     let startingCash = Number(body.startingCash || 0);
     if (startingCash <= 0) {
-      const latestShift: any = memoryStore.shifts[0];
+      const closedShifts = memoryStore.shifts.filter((s: any) => s.status === 'closed');
+      const latestShift: any = closedShifts[0] || memoryStore.shifts[0];
       if (latestShift) {
         startingCash = latestShift.actualCash !== null && latestShift.actualCash !== undefined
           ? Number(latestShift.actualCash)
