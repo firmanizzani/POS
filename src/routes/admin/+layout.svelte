@@ -27,6 +27,8 @@
     { href: '/admin/akun', label: 'Manajemen Akun', icon: UserCog }
   ];
 
+  let isAuthReady = false;
+
   onMount(() => {
     const unsubscribe = authStore.subscribe((user) => {
       if (!user) {
@@ -34,6 +36,8 @@
       } else if (user.role !== 'admin') {
         // Cashier trying to access admin — block and redirect
         goto('/kasir');
+      } else {
+        isAuthReady = true;
       }
     });
     return unsubscribe;
@@ -45,6 +49,7 @@
   }
 </script>
 
+{#if isAuthReady}
 <div class="min-h-screen flex flex-col bg-slate-100 text-slate-900 transition-opacity duration-200">
   <!-- Admin Top Header -->
   <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm z-10">
@@ -105,3 +110,4 @@
     </main>
   </div>
 </div>
+{/if}

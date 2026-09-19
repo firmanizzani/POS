@@ -5,8 +5,10 @@
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/authStore';
 
+  let isMounted = false;
+
   onMount(() => {
-    // If not logged in and not already on /login, redirect to login
+    isMounted = true;
     const unsubscribe = authStore.subscribe((user) => {
       const isLoginPage = $page.url.pathname === '/login';
       if (!user && !isLoginPage) {
@@ -17,4 +19,10 @@
   });
 </script>
 
-<slot />
+{#if isMounted}
+  <slot />
+{:else}
+  <div class="min-h-screen bg-slate-100 flex items-center justify-center">
+    <div class="w-6 h-6 border-2 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+{/if}
