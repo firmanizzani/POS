@@ -10,29 +10,16 @@
     Download
   } from 'lucide-svelte';
 
-  let isLoading = true;
+  export let data: any;
 
-  let analytics = {
+  $: analytics = data?.analytics || {
     totalOmset: 0,
     netProfit: 0,
     totalTransactions: 0,
     averageOrderValue: 0,
-    topProducts: [] as any[],
-    lowStockAlerts: [] as any[]
+    topProducts: [],
+    lowStockAlerts: []
   };
-
-  onMount(async () => {
-    try {
-      const res = await fetch('/api/analytics/dashboard').then(r => r.json());
-      if (res?.success && res.data) {
-        analytics = res.data;
-      }
-    } catch (e) {
-      console.warn('Failed to load dashboard analytics from API', e);
-    } finally {
-      isLoading = false;
-    }
-  });
 
   function formatRp(val: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
