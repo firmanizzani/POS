@@ -31,6 +31,7 @@
           costPrice: Number(p.costPrice),
           sellPrice: Number(p.sellPrice),
           stock: Number(p.stock),
+          minStockAlert: p.minStockAlert !== undefined ? Number(p.minStockAlert) : 5,
           unit: p.unit || 'pcs',
           imageUrl: p.imageUrl || ''
         }));
@@ -56,6 +57,7 @@
     costPrice: 0,
     sellPrice: 0,
     stock: 0,
+    minStockAlert: 5,
     unit: 'pcs',
     imageUrl: ''
   };
@@ -112,6 +114,7 @@
       costPrice: 0,
       sellPrice: 0,
       stock: 0,
+      minStockAlert: 5,
       unit: 'pcs',
       imageUrl: ''
     };
@@ -177,6 +180,7 @@
             costPrice: Number(form.costPrice),
             sellPrice: Number(form.sellPrice),
             stock: Number(form.stock),
+            minStockAlert: Number(form.minStockAlert ?? 5),
             unit: form.unit,
             imageUrl: form.imageUrl || null
           })
@@ -202,6 +206,7 @@
             costPrice: Number(form.costPrice),
             sellPrice: Number(form.sellPrice),
             stock: Number(form.stock),
+            minStockAlert: Number(form.minStockAlert ?? 5),
             unit: form.unit,
             imageUrl: form.imageUrl || null
           })
@@ -311,7 +316,7 @@
             <td class="p-3.5 text-right font-mono text-emerald-700 font-bold">{formatRp(p.sellPrice)}</td>
             <td class="p-3.5 text-center font-bold font-mono"><span class="px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 border border-sky-100">{p.stock}</span></td>
             <td class="p-3.5 text-center space-x-2">
-              <button on:click={() => { editingId = p.id; form = { ...p }; showModal = true; }} class="p-1.5 bg-slate-100 hover:bg-slate-200 text-sky-700 rounded-lg border border-slate-200">
+              <button on:click={() => { editingId = p.id; form = { ...p, minStockAlert: p.minStockAlert ?? 5 }; showModal = true; }} class="p-1.5 bg-slate-100 hover:bg-slate-200 text-sky-700 rounded-lg border border-slate-200">
                 <Edit3 class="w-4 h-4" />
               </button>
               <button on:click={() => deleteProduct(p.id)} class="p-1.5 bg-slate-100 hover:bg-slate-200 text-red-600 rounded-lg border border-slate-200">
@@ -355,7 +360,7 @@
             {#each categories as cat}
               <option value={cat.id}>{cat.code} — {cat.name}</option>
             {/each}
-
+          </select>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -367,7 +372,7 @@
             <input type="number" bind:value={form.sellPrice} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-3 gap-2">
           <div>
             <label class="text-slate-600 font-bold">Stok Awal</label>
             <input type="number" bind:value={form.stock} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
@@ -375,6 +380,10 @@
           <div>
             <label class="text-slate-600 font-bold">Satuan (Unit)</label>
             <input type="text" bind:value={form.unit} class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
+          </div>
+          <div>
+            <label class="text-slate-600 font-bold">Alert Stok Min</label>
+            <input type="number" bind:value={form.minStockAlert} placeholder="5" class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 mt-1" />
           </div>
         </div>
         <div>

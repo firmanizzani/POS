@@ -87,7 +87,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       stock: body.stock || 0,
       unit: body.unit || 'pcs',
       imageUrl: body.imageUrl || null,
-      minStockAlert: 5,
+      minStockAlert: body.minStockAlert ?? 5,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -113,6 +113,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       costPrice: t.Number(),
       sellPrice: t.Number(),
       stock: t.Optional(t.Number()),
+      minStockAlert: t.Optional(t.Number()),
       unit: t.Optional(t.String()),
       imageUrl: t.Optional(t.Nullable(t.String()))
     })
@@ -131,6 +132,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
           costPrice: costPriceToSave,
           sellPrice: sellPriceToSave,
           stock: body.stock,
+          minStockAlert: body.minStockAlert !== undefined ? body.minStockAlert : undefined,
           unit: body.unit,
           imageUrl: imageUrlToSave,
           updatedAt: new Date()
@@ -148,6 +150,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
           costPrice: body.costPrice,
           sellPrice: body.sellPrice,
           stock: body.stock,
+          minStockAlert: body.minStockAlert,
           unit: body.unit,
           imageUrl: imageUrlToSave
         }
