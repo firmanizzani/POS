@@ -79,6 +79,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       clockOut: null,
       startingCash: Number(body.startingCash),
       salesCash: 0,
+      withdrawalsTotal: 0,
       expectedCash: Number(body.startingCash),
       actualCash: null,
       difference: null,
@@ -115,13 +116,57 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     })
   })
 
+  // Shift Management: Tarik Kas / Pengambilan Owner (Cash Drop)
+  .post('/shift/withdraw', async ({ body }: { body: { shiftId: string; amount: number; notes?: string; withdrawnBy?: string } }) => {
+    const shift: any = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts.find(s => s.status === 'open');
+    if (!shift) {
+      return { success: false, message: 'Shift aktif tidak ditemukan' };
+    }
+
+    const withdrawAmt = Number(body.amount) || 0;
+    shift.withdrawalsTotal = (shift.withdrawalsTotal || 0) + withdrawAmt;
+    shift.expectedCash = (shift.startingCash || 0) + (shift.salesCash || 0) - shift.withdrawalsTotal;
+    const withdrawNote = `[Pengambilan Owner Rp ${withdrawAmt.toLocaleString('id-ID')}${body.notes ? ': ' + body.notes : ''}]`;
+    shift.notes = shift.notes ? `${shift.notes}; ${withdrawNote}` : withdrawNote;
+
+    try {
+      await db.update(cashierShifts)
+        .set({
+          expectedCash: shift.expectedCash.toString(),
+          notes: shift.notes
+        })
+        .where(eq(cashierShifts.id, shift.id));
+    } catch (e: any) {
+      console.warn('DB update shift withdraw error, updated in memoryStore:', e.message);
+    }
+
+    return {
+      success: true,
+      message: `Pengambilan kas sebesar Rp ${withdrawAmt.toLocaleString('id-ID')} berhasil dicatat!`,
+      data: {
+        shiftId: shift.id,
+        withdrawAmount: withdrawAmt,
+        totalWithdrawals: shift.withdrawalsTotal,
+        expectedCash: shift.expectedCash
+      }
+    };
+  }, {
+    body: t.Object({
+      shiftId: t.String(),
+      amount: t.Number(),
+      notes: t.Optional(t.String()),
+      withdrawnBy: t.Optional(t.String())
+    })
+  })
+
   // Shift Management: Clock-Out (Rekap Laci)
   .post('/shift/clock-out', async ({ body }: { body: any }) => {
-    const shift = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts[0];
+    const shift: any = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts[0];
     const clockOutTime = new Date();
     const startingCash = Number(body.startingCash ?? shift?.startingCash ?? 200000);
     const totalSalesCash = Number(body.totalSalesCash ?? shift?.salesCash ?? 0);
-    const expectedCash = startingCash + totalSalesCash;
+    const totalWithdrawals = Number(body.totalWithdrawals ?? shift?.withdrawalsTotal ?? 0);
+    const expectedCash = startingCash + totalSalesCash - totalWithdrawals;
     const actualCash = Number(body.actualCash);
     const difference = actualCash - expectedCash;
 
@@ -129,6 +174,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       shift.clockOut = clockOutTime.toISOString();
       shift.startingCash = startingCash;
       shift.salesCash = totalSalesCash;
+      shift.withdrawalsTotal = totalWithdrawals;
       shift.expectedCash = expectedCash;
       shift.actualCash = actualCash;
       shift.difference = difference;
@@ -159,6 +205,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         clockOut: clockOutTime.toISOString(),
         startingCash,
         totalSalesCash,
+        totalWithdrawals,
         expectedCash,
         actualCash,
         difference,
@@ -170,6 +217,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       shiftId: t.String(),
       startingCash: t.Optional(t.Number()),
       totalSalesCash: t.Optional(t.Number()),
+      totalWithdrawals: t.Optional(t.Number()),
       actualCash: t.Number(),
       notes: t.Optional(t.String())
     })

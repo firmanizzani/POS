@@ -13,8 +13,11 @@ export interface CartItem {
 export interface ShiftState {
   isClockedIn: boolean;
   shiftId: string | null;
+  cashierId?: string | null;
   cashierName: string;
   startingCash: number;
+  salesCash: number;
+  withdrawalsTotal: number;
   clockInTime: string | null;
 }
 
@@ -29,9 +32,12 @@ export interface HeldCart {
 // 1. Shift Store
 export const shiftStore = writable<ShiftState>({
   isClockedIn: true,
-  shiftId: 'shift-1001',
+  shiftId: 'shift-1002',
+  cashierId: 'user-kasir-1',
   cashierName: 'Ahmad Kasir',
   startingCash: 200000,
+  salesCash: 0,
+  withdrawalsTotal: 0,
   clockInTime: new Date().toISOString()
 });
 
