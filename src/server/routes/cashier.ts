@@ -2,11 +2,16 @@ import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
 import { cashierShifts, users, transactions, transactionItems, products, members } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { memoryStore } from '../db/store.js';
+import { memoryStore, syncMemoryStoreToDb } from '../db/store.js';
 
 export const cashierRoutes = new Elysia({ prefix: '/cashier' })
-  // Get all shift audit records (from DB with memoryStore fallback)
+  // Get all shift audit records (merged from DB and memoryStore)
   .get('/shifts', async () => {
+    await syncMemoryStoreToDb().catch(() => {});
+
+    let combinedShifts: any[] = [];
+    const userMap = new Map(memoryStore.users.map(u => [u.id, u.name]));
+
     try {
       const shiftsFromDb = await db.select({
         id: cashierShifts.id,
@@ -24,34 +29,61 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       .leftJoin(users, eq(cashierShifts.userId, users.id));
 
       if (shiftsFromDb.length > 0) {
-        return {
-          success: true,
-          data: shiftsFromDb.map(s => {
-            const start = Number(s.startingCash || 0);
-            const exp = Number(s.expectedCash || start);
-            const act = s.actualCash !== null ? Number(s.actualCash) : null;
-            return {
-              id: s.id,
-              userId: s.userId,
-              cashierName: s.cashierName || 'Kasir',
-              clockIn: s.clockIn ? new Date(s.clockIn).toISOString() : new Date().toISOString(),
-              clockOut: s.clockOut ? new Date(s.clockOut).toISOString() : null,
+        combinedShifts = shiftsFromDb.map(s => {
+          const start = Number(s.startingCash || 0);
+          const exp = Number(s.expectedCash || start);
+          const act = s.actualCash !== null && s.actualCash !== undefined ? Number(s.actualCash) : null;
+          const memShift: any = memoryStore.shifts.find((ms: any) => ms.id === s.id);
+          const salesCash = memShift ? (memShift.salesCash || 0) : Math.max(0, exp - start);
+          return {
+            id: s.id,
+            userId: s.userId,
+            cashierName: s.cashierName || userMap.get(s.userId) || memShift?.cashierName || 'Kasir',
+            clockIn: s.clockIn ? new Date(s.clockIn).toISOString() : new Date().toISOString(),
+            clockOut: s.clockOut ? new Date(s.clockOut).toISOString() : null,
+            startingCash: start,
+            salesCash,
+            expectedCash: exp,
+            actualCash: act,
+            difference: act !== null ? act - exp : null,
+            notes: s.notes || memShift?.notes || '',
+            status: s.status || 'open'
+          };
+        });
+
+        // Add any memoryStore shifts not yet in DB
+        const dbIdSet = new Set(combinedShifts.map(s => s.id));
+        for (const ms of memoryStore.shifts) {
+          if (!dbIdSet.has(ms.id)) {
+            const start = Number(ms.startingCash || 0);
+            const exp = Number(ms.expectedCash || start);
+            const act = ms.actualCash !== null && ms.actualCash !== undefined ? Number(ms.actualCash) : null;
+            combinedShifts.unshift({
+              id: ms.id,
+              userId: ms.userId,
+              cashierName: userMap.get(ms.userId) || ms.cashierName || 'Kasir',
+              clockIn: ms.clockIn ? new Date(ms.clockIn).toISOString() : new Date().toISOString(),
+              clockOut: ms.clockOut ? new Date(ms.clockOut).toISOString() : null,
               startingCash: start,
-              salesCash: Math.max(0, exp - start),
+              salesCash: Number(ms.salesCash || 0),
               expectedCash: exp,
               actualCash: act,
               difference: act !== null ? act - exp : null,
-              notes: s.notes || '',
-              status: s.status || 'open'
-            };
-          })
+              notes: ms.notes || '',
+              status: ms.status || 'open'
+            });
+          }
+        }
+
+        return {
+          success: true,
+          data: combinedShifts
         };
       }
     } catch (e: any) {
       console.warn('DB cashierShifts error, fallback to memoryStore:', e.message);
     }
 
-    const userMap = new Map(memoryStore.users.map(u => [u.id, u.name]));
     const shiftsWithNames = memoryStore.shifts.map((s: any) => ({
       ...s,
       cashierName: userMap.get(s.userId) || s.cashierName || 'Kasir'
@@ -110,6 +142,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       activeShift.cashierName = cashier.name;
     }
 
+    await syncMemoryStoreToDb().catch(() => {});
+
     return {
       success: true,
       data: activeShift
@@ -158,21 +192,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       status: 'open'
     };
 
-    try {
-      await db.insert(cashierShifts).values({
-        id: shiftId,
-        userId: body.cashierId,
-        clockIn: now,
-        startingCash: startingCash.toString(),
-        expectedCash: startingCash.toString(),
-        notes: body.notes || 'Shift Aktif',
-        status: 'open'
-      });
-    } catch (e: any) {
-      console.warn('DB insert shift error, saved to memoryStore:', e.message);
-    }
-
     memoryStore.shifts.unshift(newShift);
+    await syncMemoryStoreToDb().catch(() => {});
 
     return {
       success: true,
@@ -200,16 +221,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     const withdrawNote = `[Pengambilan Owner Rp ${withdrawAmt.toLocaleString('id-ID')}${body.notes ? ': ' + body.notes : ''}]`;
     shift.notes = shift.notes ? `${shift.notes}; ${withdrawNote}` : withdrawNote;
 
-    try {
-      await db.update(cashierShifts)
-        .set({
-          expectedCash: shift.expectedCash.toString(),
-          notes: shift.notes
-        })
-        .where(eq(cashierShifts.id, shift.id));
-    } catch (e: any) {
-      console.warn('DB update shift withdraw error, updated in memoryStore:', e.message);
-    }
+    await syncMemoryStoreToDb().catch(() => {});
 
     return {
       success: true,
@@ -254,19 +266,33 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
     }
 
     try {
-      await db.update(cashierShifts)
-        .set({
+      let dbUserId = shift?.userId || 'user-kasir-1';
+      await db.insert(cashierShifts).values({
+        id: body.shiftId,
+        userId: dbUserId,
+        clockIn: shift?.clockIn ? new Date(shift.clockIn) : new Date(),
+        clockOut: clockOutTime,
+        startingCash: startingCash.toString(),
+        expectedCash: expectedCash.toString(),
+        actualCash: actualCash.toString(),
+        notes: body.notes || (shift ? shift.notes : ''),
+        status: 'closed'
+      }).onConflictDoUpdate({
+        target: cashierShifts.id,
+        set: {
           clockOut: clockOutTime,
           startingCash: startingCash.toString(),
           expectedCash: expectedCash.toString(),
           actualCash: actualCash.toString(),
           notes: body.notes || (shift ? shift.notes : ''),
           status: 'closed'
-        })
-        .where(eq(cashierShifts.id, body.shiftId));
+        }
+      });
     } catch (e: any) {
       console.warn('DB update shift error, updated in memoryStore:', e.message);
     }
+
+    await syncMemoryStoreToDb().catch(() => {});
 
     return {
       success: true,

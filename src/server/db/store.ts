@@ -106,6 +106,37 @@ export async function syncMemoryStoreToDb() {
         console.log(`✅ Auto-synced offline transaction ${memTrx.invoiceNumber} to PostgreSQL DB`);
       }
     }
+
+    // Auto-sync memoryStore shifts to DB cashierShifts table
+    for (const memShift of memoryStore.shifts) {
+      let dbUserId = 'user-kasir-1';
+      if (memShift.userId) {
+        const checkUser = await db.select({ id: users.id }).from(users).where(eq(users.id, memShift.userId));
+        if (checkUser.length > 0) dbUserId = memShift.userId;
+      }
+
+      await db.insert(cashierShifts).values({
+        id: memShift.id,
+        userId: dbUserId,
+        clockIn: new Date(memShift.clockIn || Date.now()),
+        clockOut: memShift.clockOut ? new Date(memShift.clockOut) : null,
+        startingCash: (memShift.startingCash || 0).toString(),
+        expectedCash: (memShift.expectedCash || 0).toString(),
+        actualCash: memShift.actualCash !== null && memShift.actualCash !== undefined ? memShift.actualCash.toString() : null,
+        notes: memShift.notes || '',
+        status: memShift.status || 'open'
+      }).onConflictDoUpdate({
+        target: cashierShifts.id,
+        set: {
+          clockOut: memShift.clockOut ? new Date(memShift.clockOut) : null,
+          startingCash: (memShift.startingCash || 0).toString(),
+          expectedCash: (memShift.expectedCash || 0).toString(),
+          actualCash: memShift.actualCash !== null && memShift.actualCash !== undefined ? memShift.actualCash.toString() : null,
+          notes: memShift.notes || '',
+          status: memShift.status || 'open'
+        }
+      }).catch(() => {});
+    }
   } catch (e: any) {
     // Silently handle if DB is temporarily offline
   }
