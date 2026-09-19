@@ -1,20 +1,32 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
-import { members } from '../db/schema.js';
+import { members, transactions } from '../db/schema.js';
 import { memoryStore } from '../db/store.js';
 
 export const memberRoutes = new Elysia({ prefix: '/members' })
   .get('/', async () => {
+    let memberSpendMap = new Map<string, number>();
+
     try {
+      const allTrx = await db.select({ memberId: transactions.memberId, grandTotal: transactions.grandTotal }).from(transactions);
+      for (const t of allTrx) {
+        if (t.memberId) {
+          const current = memberSpendMap.get(t.memberId) || 0;
+          memberSpendMap.set(t.memberId, current + Number(t.grandTotal || 0));
+        }
+      }
+
       const list = await db.select().from(members);
       if (list.length > 0) {
         return {
           success: true,
           data: list.map(m => {
             const pts = Number(m.points || 0);
+            const totalSpend = memberSpendMap.get(m.id) || (pts / 0.005);
+            
             let computedTier = m.tier ? m.tier.toUpperCase() : 'BRONZE';
-            if (pts >= 25000) computedTier = 'GOLD';
-            else if (pts >= 10000) computedTier = 'SILVER';
+            if (totalSpend >= 5_000_000 || pts >= 25000) computedTier = 'GOLD';
+            else if (totalSpend >= 2_000_000 || pts >= 10000) computedTier = 'SILVER';
             else computedTier = 'BRONZE';
 
             return {
@@ -23,6 +35,7 @@ export const memberRoutes = new Elysia({ prefix: '/members' })
               name: m.name,
               phone: m.phone,
               points: pts,
+              totalSpend: Math.round(totalSpend),
               tier: computedTier
             };
           })
@@ -32,11 +45,21 @@ export const memberRoutes = new Elysia({ prefix: '/members' })
       console.warn('DB members error, fallback to memoryStore:', e.message);
     }
 
+    // Fallback to memoryStore calculation
+    for (const t of memoryStore.transactions) {
+      if (t.memberId) {
+        const current = memberSpendMap.get(t.memberId) || 0;
+        memberSpendMap.set(t.memberId, current + Number(t.grandTotal || 0));
+      }
+    }
+
     const data = memoryStore.members.map(m => {
       const pts = Number(m.points || 0);
+      const totalSpend = memberSpendMap.get(m.id) || (pts / 0.005);
+
       let computedTier = m.tier ? m.tier.toUpperCase() : 'BRONZE';
-      if (pts >= 25000) computedTier = 'GOLD';
-      else if (pts >= 10000) computedTier = 'SILVER';
+      if (totalSpend >= 5_000_000 || pts >= 25000) computedTier = 'GOLD';
+      else if (totalSpend >= 2_000_000 || pts >= 10000) computedTier = 'SILVER';
       else computedTier = 'BRONZE';
 
       return {
@@ -45,6 +68,7 @@ export const memberRoutes = new Elysia({ prefix: '/members' })
         name: m.name,
         phone: m.phone,
         points: pts,
+        totalSpend: Math.round(totalSpend),
         tier: computedTier
       };
     });

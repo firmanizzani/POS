@@ -51,6 +51,10 @@
       isSaving = false;
     }
   }
+
+  function formatRp(val: number) {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+  }
 </script>
 
 <div class="space-y-6">
@@ -85,6 +89,7 @@
           <th class="p-3">Kode Member</th>
           <th class="p-3">Nama Member</th>
           <th class="p-3">No. HP</th>
+          <th class="p-3 text-right">Total Akumulasi Belanja</th>
           <th class="p-3 text-center">Poin Active</th>
           <th class="p-3 text-center">Tier Member</th>
         </tr>
@@ -97,6 +102,9 @@
             <td class="p-3 text-slate-500 font-mono flex items-center space-x-1">
               <Phone class="w-3.5 h-3.5" />
               <span>{m.phone}</span>
+            </td>
+            <td class="p-3 text-right font-mono font-bold text-slate-900 text-sm">
+              {formatRp(m.totalSpend || 0)}
             </td>
             <td class="p-3 text-center font-bold text-amber-600 font-mono text-sm">{m.points} pts</td>
             <td class="p-3 text-center">
