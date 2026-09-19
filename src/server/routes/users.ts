@@ -37,7 +37,14 @@ export const userRoutes = new Elysia({ prefix: '/users' })
     return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
-    const id = `user-${Date.now()}`;
+    let maxUserNum = 0;
+    const dbUsers = await db.select({ id: users.id }).from(users).catch(() => []);
+    const allUserIds = [...dbUsers.map(u => u.id), ...memoryStore.users.map(u => u.id)];
+    const numUserIds = allUserIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    if (numUserIds.length > 0) maxUserNum = Math.max(...numUserIds);
+    const nextUserNum = maxUserNum + 1;
+
+    const id = `user-${nextUserNum}`;
     const newUser = {
       id,
       name: body.name,

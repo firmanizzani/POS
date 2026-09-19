@@ -92,8 +92,19 @@
     editingId = null;
     uploadError = '';
     isSkuTouched = false;
+
+    // Cari barcode terbesar yang berformat angka / 899...
+    let maxBarcode = 899100000000;
+    const barcodeNums = products
+      .map(p => parseInt(p.barcode, 10))
+      .filter(n => !isNaN(n));
+    if (barcodeNums.length > 0) {
+      maxBarcode = Math.max(...barcodeNums);
+    }
+    const nextBarcode = (maxBarcode + 1).toString();
+
     form = {
-      barcode: `899${Math.floor(100000000 + Math.random() * 900000000)}`,
+      barcode: nextBarcode,
       sku: '',
       name: '',
       category: 'Mie & Makanan Instan',

@@ -34,8 +34,15 @@ export const memberRoutes = new Elysia({ prefix: '/members' })
     return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
-    const id = `mbr-${Date.now()}`;
-    const memberCode = `MBR-00${memoryStore.members.length + 1}`;
+    let maxMbrNum = 0;
+    const dbMembers = await db.select({ id: members.id, memberCode: members.memberCode }).from(members).catch(() => []);
+    const allMemberIds = [...dbMembers.map(m => m.id), ...memoryStore.members.map(m => m.id)];
+    const numMemberIds = allMemberIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    if (numMemberIds.length > 0) maxMbrNum = Math.max(...numMemberIds);
+    const nextMbrNum = maxMbrNum + 1;
+
+    const id = `mbr-${nextMbrNum}`;
+    const memberCode = `MBR-${nextMbrNum.toString().padStart(3, '0')}`;
     
     const newMember = {
       id,

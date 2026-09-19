@@ -36,7 +36,14 @@ export const promoRoutes = new Elysia({ prefix: '/promos' })
     return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
-    const id = `prm-${Date.now()}`;
+    let maxPrmNum = 0;
+    const dbPromos = await db.select({ id: promos.id }).from(promos).catch(() => []);
+    const allPromoIds = [...dbPromos.map(p => p.id), ...memoryStore.promos.map(p => p.id)];
+    const numPromoIds = allPromoIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    if (numPromoIds.length > 0) maxPrmNum = Math.max(...numPromoIds);
+    const nextPrmNum = maxPrmNum + 1;
+
+    const id = `prm-${nextPrmNum}`;
     const isPercent = body.value.includes('%');
     const numericVal = body.value.replace(/[^0-9]/g, '');
 

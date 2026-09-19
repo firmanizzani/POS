@@ -54,12 +54,29 @@ export const supplierRoutes = new Elysia({ prefix: '/suppliers' })
     return { success: true, data };
   })
   .post('/po', async ({ body }: { body: any }) => {
-    const id = `po-${Date.now()}`;
-    const poNumber = `PO-${new Date().toISOString().slice(0, 7).replace('-', '')}-00${memoryStore.purchaseOrders.length + 1}`;
+    // Cari angka terbesar dari ID PO yang ada
+    let maxPoNum = 0;
+    const dbPos = await db.select({ id: purchaseOrders.id }).from(purchaseOrders).catch(() => []);
+    const allPoIds = [...dbPos.map(p => p.id), ...memoryStore.purchaseOrders.map(p => p.id)];
+    const numPoIds = allPoIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    if (numPoIds.length > 0) maxPoNum = Math.max(...numPoIds);
+    const nextPoNum = maxPoNum + 1;
+
+    const id = `po-${nextPoNum}`;
+    const poNumber = `PO-${new Date().toISOString().slice(0, 7).replace('-', '')}-${nextPoNum.toString().padStart(3, '0')}`;
     
     // Find or create supplier
     let supplier = memoryStore.suppliers.find(s => s.name.toLowerCase() === body.supplierName.toLowerCase());
-    let supplierId = supplier?.id || `sup-${Date.now()}`;
+    let supplierId = supplier?.id;
+    if (!supplierId) {
+      let maxSupNum = 0;
+      const dbSups = await db.select({ id: suppliers.id }).from(suppliers).catch(() => []);
+      const allSupIds = [...dbSups.map(s => s.id), ...memoryStore.suppliers.map(s => s.id)];
+      const numSupIds = allSupIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+      if (numSupIds.length > 0) maxSupNum = Math.max(...numSupIds);
+      supplierId = `sup-${maxSupNum + 1}`;
+    }
+
     if (!supplier) {
       supplier = { id: supplierId, name: body.supplierName, phone: '', email: '', address: '' };
       memoryStore.suppliers.push(supplier);

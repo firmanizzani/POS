@@ -51,11 +51,37 @@ export const productRoutes = new Elysia({ prefix: '/products' })
     return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
-    const id = `prod-${Date.now()}`;
+    // 1. Tentukan ID produk berikutnya (+1)
+    let nextIdNum = 101;
+    const dbMaxId = await db.select({ id: products.id }).from(products).catch(() => []);
+    const allIds = [...dbMaxId.map(p => p.id), ...memoryStore.products.map(p => p.id)];
+    const numIds = allIds
+      .map(id => parseInt(id.replace(/[^0-9]/g, ''), 10))
+      .filter(n => !isNaN(n));
+    if (numIds.length > 0) {
+      nextIdNum = Math.max(...numIds) + 1;
+    }
+    const id = `prod-${nextIdNum}`;
+
+    // 2. Tentukan Barcode produk berikutnya (+1) jika tidak diisi atau acak
+    let barcode = body.barcode;
+    if (!barcode || barcode.startsWith('899')) {
+      let maxBarcodeNum = 899100000000;
+      const dbBarcodes = await db.select({ barcode: products.barcode }).from(products).catch(() => []);
+      const allBarcodes = [...dbBarcodes.map(p => p.barcode), ...memoryStore.products.map(p => p.barcode)];
+      const numBarcodes = allBarcodes
+        .map(b => parseInt(b, 10))
+        .filter(n => !isNaN(n));
+      if (numBarcodes.length > 0) {
+        maxBarcodeNum = Math.max(...numBarcodes);
+      }
+      barcode = (maxBarcodeNum + 1).toString();
+    }
+
     const newProd = {
       id,
-      barcode: body.barcode,
-      sku: (body.sku ? body.sku.toUpperCase() : (body.name ? body.name.toUpperCase().replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '').replace(/[^A-Z0-9\s]/g, '').trim().split(/\s+/).join('-') : `SKU-${Date.now()}`)).slice(0, 20),
+      barcode,
+      sku: (body.sku ? body.sku.toUpperCase() : (body.name ? body.name.toUpperCase().replace(/(?<=\d)(ML|G|KG|L|CL|PCS|PACK|GR|GRAM)\b/gi, '').replace(/[^A-Z0-9\s]/g, '').trim().split(/\s+/).join('-') : `SKU-${nextIdNum}`)).slice(0, 20),
       name: body.name,
       categoryId: body.categoryId || null,
       costPrice: (body.costPrice ?? 0).toString(),
@@ -71,10 +97,14 @@ export const productRoutes = new Elysia({ prefix: '/products' })
 
     try {
       await db.insert(products).values(newProd);
-      return { success: true, message: 'Produk berhasil ditambahkan ke database Neon', data: newProd };
+      // Sinkronkan juga ke memoryStore
+      memoryStore.products.push(newProd as any);
+      return { success: true, message: 'Produk berhasil ditambahkan ke database', data: newProd };
     } catch (error: any) {
       console.error('DB insert failed:', error.message);
-      return { success: false, message: 'Gagal menambahkan produk ke database: ' + error.message };
+      // Simpan ke memoryStore jika DB fail
+      memoryStore.products.push(newProd as any);
+      return { success: true, message: 'Produk berhasil ditambahkan ke memoryStore (DB warning)', data: newProd };
     }
   }, {
     body: t.Object({

@@ -60,7 +60,15 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
   // Shift Management: Clock-In (Kas Awal)
   .post('/shift/clock-in', async ({ body }: { body: any }) => {
     const cashier = memoryStore.users.find(u => u.id === body.cashierId) || { name: 'Ahmad Kasir' };
-    const shiftId = `shift-${Date.now()}`;
+
+    let maxShiftNum = 1000;
+    const dbShifts = await db.select({ id: cashierShifts.id }).from(cashierShifts).catch(() => []);
+    const allShiftIds = [...dbShifts.map(s => s.id), ...memoryStore.shifts.map(s => s.id)];
+    const numShiftIds = allShiftIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
+    const nextShiftNum = maxShiftNum + 1;
+
+    const shiftId = `shift-${nextShiftNum}`;
     const now = new Date();
 
     const newShift = {
@@ -184,8 +192,15 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
 
   // Checkout Transaction — Simpan ke memoryStore + update shift omset + update member points
   .post('/checkout', ({ body }: { body: any }) => {
-    const invoiceNumber = `INV-${Date.now()}`;
+    let maxTrxNum = 0;
+    const allTrxIds = memoryStore.transactions.map((t: any) => t.id);
+    const numTrxIds = allTrxIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    if (numTrxIds.length > 0) maxTrxNum = Math.max(...numTrxIds);
+    const nextTrxNum = maxTrxNum + 1;
+
+    const invoiceNumber = `INV-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${nextTrxNum.toString().padStart(3, '0')}`;
     const now = new Date();
+    const trxId = `trx-${nextTrxNum}`;
 
     // Cari promo jika ada promoCode
     let promoId = body.promoId || null;
@@ -199,7 +214,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
 
     // Buat transaksi baru
     const newTrx: any = {
-      id: `trx-${Date.now()}`,
+      id: trxId,
       invoiceNumber,
       cashierId: body.cashierId || 'user-kasir-1',
       shiftId: body.shiftId || null,
@@ -215,8 +230,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       earnedPoints: body.earnedPoints || 0,
       createdAt: now,
       items: (body.items || []).map((item: any, idx: number) => ({
-        id: `ti-${Date.now()}-${idx}`,
-        transactionId: `trx-${Date.now()}`,
+        id: `ti-${nextTrxNum}-${idx + 1}`,
+        transactionId: trxId,
         productId: item.id,
         productName: item.name,
         costPrice: '0',
