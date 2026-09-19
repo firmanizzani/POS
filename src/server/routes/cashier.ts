@@ -361,7 +361,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
 
   // Shift Management: Clock-Out (Rekap Laci)
   .post('/shift/clock-out', async ({ body }: { body: any }) => {
-    const shift: any = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts[0];
+    const shift: any = memoryStore.shifts.find(s => s.id === body.shiftId) || memoryStore.shifts.find(s => s.status === 'open') || memoryStore.shifts[0];
     const clockOutTime = new Date();
     const startingCash = Number(body.startingCash ?? shift?.startingCash ?? 200000);
     const totalSalesCash = Number(body.totalSalesCash ?? shift?.salesCash ?? 0);
@@ -382,11 +382,13 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       if (body.notes) shift.notes = body.notes;
     }
 
+    const currentShiftId = shift?.id || body.shiftId;
+    const currentUserId = shift?.userId || 'user-kasir-1';
+
     try {
-      let dbUserId = shift?.userId || 'user-kasir-1';
       await db.insert(cashierShifts).values({
-        id: body.shiftId,
-        userId: dbUserId,
+        id: currentShiftId,
+        userId: currentUserId,
         clockIn: shift?.clockIn ? new Date(shift.clockIn) : new Date(),
         clockOut: clockOutTime,
         startingCash: startingCash.toString(),
@@ -409,13 +411,58 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       console.warn('DB update shift error, updated in memoryStore:', e.message);
     }
 
+    // Automagically create NEW OPEN SHIFT (+1 shift counter) with carry over starting cash
+    let maxShiftNum = 1000;
+    const dbShifts = await db.select({ id: cashierShifts.id }).from(cashierShifts).catch(() => []);
+    const allShiftIds = [...dbShifts.map(s => s.id), ...memoryStore.shifts.map((s: any) => s.id)];
+    const numShiftIds = allShiftIds.map((id: string) => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter((n: number) => !isNaN(n));
+    if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
+    const nextShiftNum = maxShiftNum + 1;
+
+    const nextShiftId = `shift-${nextShiftNum}`;
+    const newStartingCash = actualCash; // Carry-over exact ending physical drawer balance
+
+    const newShift = {
+      id: nextShiftId,
+      userId: currentUserId,
+      cashierName: shift?.cashierName || 'Kasir',
+      clockIn: new Date().toISOString(),
+      clockOut: null,
+      startingCash: newStartingCash,
+      salesCash: 0,
+      withdrawalsTotal: 0,
+      expectedCash: newStartingCash,
+      actualCash: null,
+      difference: null,
+      notes: `Shift Baru Berjalan (${shift?.cashierName || 'Kasir'})`,
+      status: 'open'
+    };
+
+    memoryStore.shifts.unshift(newShift);
+
+    try {
+      await db.insert(cashierShifts).values({
+        id: nextShiftId,
+        userId: currentUserId,
+        clockIn: new Date(),
+        clockOut: null,
+        startingCash: newStartingCash.toString(),
+        expectedCash: newStartingCash.toString(),
+        actualCash: null,
+        notes: newShift.notes,
+        status: 'open'
+      }).onConflictDoNothing();
+    } catch (e: any) {
+      console.warn('DB insert new shift error:', e.message);
+    }
+
     await syncMemoryStoreToDb().catch(() => {});
 
     return {
       success: true,
-      message: 'Clock-Out Kasir Berhasil',
+      message: 'Clock-Out Kasir Berhasil & Shift Baru Dibuka',
       data: {
-        shiftId: body.shiftId,
+        shiftId: currentShiftId,
         clockOut: clockOutTime.toISOString(),
         startingCash,
         totalSalesCash,
@@ -423,7 +470,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         expectedCash,
         actualCash,
         difference,
-        status: 'closed'
+        status: 'closed',
+        newShift
       }
     };
   }, {

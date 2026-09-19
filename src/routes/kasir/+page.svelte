@@ -237,7 +237,25 @@
       if (res?.success) {
         const diff = res.data?.difference ?? 0;
         const diffMsg = diff === 0 ? 'Uang Laci IMPAS (Pas 100%)' : (diff > 0 ? `Uang Laci LEBIH +${formatRp(diff)}` : `Uang Laci KURANG ${formatRp(diff)}`);
-        alert(`Shift Berhasil Ditutup!\nRekap: ${diffMsg}`);
+        
+        // Update frontend shiftStore to the new automatically created shift
+        if (res.data?.newShift) {
+          const ns = res.data.newShift;
+          shiftStore.set({
+            isClockedIn: true,
+            shiftId: ns.id,
+            cashierId: ns.userId,
+            cashierName: ns.cashierName,
+            startingCash: Number(ns.startingCash),
+            salesCash: 0,
+            withdrawalsTotal: 0,
+            withdrawalsHistory: [],
+            clockInTime: ns.clockIn
+          });
+        }
+
+        alert(`Shift Berhasil Ditutup!\nRekap: ${diffMsg}\n\nShift Baru (${res.data?.newShift?.id || 'Shift Baru'}) otomatis diaktifkan dengan Kas Awal ${formatRp(Number(clockOutActualCash))}.`);
+        clockOutActualCash = undefined;
         showShiftModal = false;
       } else {
         alert('Gagal menutup shift: ' + (res?.message || 'Error'));
