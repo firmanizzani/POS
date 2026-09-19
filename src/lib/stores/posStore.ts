@@ -41,36 +41,17 @@ export interface HeldCart {
 export const shiftStore = writable<ShiftState>({
   isClockedIn: true,
   shiftId: 'shift-1002',
-  cashierId: 'user-kasir-1',
-  cashierName: 'Ahmad Kasir',
+  cashierId: null,
+  cashierName: '',
   startingCash: 200000,
   salesCash: 0,
   withdrawalsTotal: 0,
   withdrawalsHistory: [],
-  clockInTime: new Date().toISOString()
+  clockInTime: null
 });
 
 // 2. Cart Store
-export const cartItems = writable<CartItem[]>([
-  {
-    id: 'prod-1',
-    barcode: '899100110011',
-    name: 'Indomie Goreng Original 85g',
-    sellPrice: 3200,
-    costPrice: 2800,
-    quantity: 2,
-    unit: 'pcs'
-  },
-  {
-    id: 'prod-2',
-    barcode: '899200220022',
-    name: 'Air Mineral Aqua 600ml',
-    sellPrice: 3500,
-    costPrice: 2500,
-    quantity: 1,
-    unit: 'botol'
-  }
-]);
+export const cartItems = writable<CartItem[]>([]);
 
 export const selectedMember = writable<any>(null);
 export const memberPointDiscount = writable<number>(0);
