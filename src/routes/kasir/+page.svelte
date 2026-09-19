@@ -146,6 +146,7 @@
     barcode: string;
     name: string;
     category: string;
+    costPrice?: number;
     sellPrice: number;
     stock: number;
     image?: string;
@@ -236,6 +237,7 @@
           barcode: p.barcode,
           name: p.name,
           category: p.categoryName || 'Lainnya',
+          costPrice: Number(p.costPrice || 0),
           sellPrice: Number(p.sellPrice),
           stock: Number(p.stock),
           image: '🛒',

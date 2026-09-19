@@ -97,8 +97,15 @@
     intervalId = setInterval(fetchLatestAnalytics, 30000);
   });
 
+  import { Chart, registerables } from 'chart.js';
+  Chart.register(...registerables);
+
+  let canvasEl: HTMLCanvasElement;
+  let chartInstance: Chart | null = null;
+
   onDestroy(() => {
     if (intervalId) clearInterval(intervalId);
+    if (chartInstance) chartInstance.destroy();
   });
 
   function formatRp(val: number) {
@@ -112,40 +119,125 @@
     return `Rp ${val}`;
   }
 
-  // ── Chart helpers ─────────────────────────────────────────────────────
-  const CHART_H = 160;
-  const CHART_PAD_LEFT = 48;
-  const CHART_PAD_BOTTOM = 32;
-  const CHART_PAD_TOP = 12;
-  const CHART_PAD_RIGHT = 8;
-
-  $: chartPoints = revenueData?.chartData || [];
-  $: chartWidth = Math.max(chartPoints.length * 36, 300);
-  $: maxOmset = Math.max(...chartPoints.map((d: any) => d.omset), 1);
-  $: maxProfit = Math.max(...chartPoints.map((d: any) => d.profit), 1);
-  $: chartMax = Math.max(maxOmset, 1);
-
-  function barH(val: number) {
-    return Math.max(2, ((val / chartMax) * (CHART_H - CHART_PAD_TOP - CHART_PAD_BOTTOM)));
-  }
-
-  function barY(val: number) {
-    return CHART_H - CHART_PAD_BOTTOM - barH(val);
-  }
-
-  function yLabel(fraction: number) {
-    return formatRpShort(chartMax * fraction);
-  }
-
-  function shortDate(dateStr: string) {
+  function shortDate(dateStr: string, totalPoints: number = 7) {
     const d = new Date(dateStr);
-    if (chartPoints.length <= 7) {
+    if (totalPoints <= 7) {
       return d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' });
-    } else if (chartPoints.length <= 31) {
+    } else if (totalPoints <= 31) {
       return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
     } else {
       return d.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
     }
+  }
+
+  $: chartPoints = revenueData?.chartData || [];
+
+  $: if (canvasEl && chartPoints) {
+    renderChart();
+  }
+
+  function renderChart() {
+    if (!canvasEl) return;
+    if (chartInstance) {
+      chartInstance.destroy();
+    }
+
+    const labels = chartPoints.map((d: any) => shortDate(d.date, chartPoints.length));
+    const omsetData = chartPoints.map((d: any) => d.omset);
+    const profitData = chartPoints.map((d: any) => d.profit);
+
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+
+    // Gradient background for Omset
+    const omsetGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    omsetGradient.addColorStop(0, 'rgba(14, 165, 233, 0.35)');
+    omsetGradient.addColorStop(1, 'rgba(14, 165, 233, 0.02)');
+
+    // Gradient background for Profit
+    const profitGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    profitGradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+    profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Omset (Gross)',
+            data: omsetData,
+            borderColor: '#0ea5e9',
+            backgroundColor: omsetGradient,
+            borderWidth: 3,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#0ea5e9',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 7
+          },
+          {
+            label: 'Profit Bersih (Net)',
+            data: profitData,
+            borderColor: '#10b981',
+            backgroundColor: profitGradient,
+            borderWidth: 3,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#10b981',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 7
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleFont: { size: 12, weight: 'bold' },
+            bodyFont: { size: 12 },
+            padding: 12,
+            cornerRadius: 12,
+            callbacks: {
+              label: function (context) {
+                const val = context.parsed.y || 0;
+                return `  ${context.dataset.label}: ${formatRp(val)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 11 }, color: '#64748b' }
+          },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              font: { size: 10 },
+              color: '#64748b',
+              callback: function (val) {
+                return formatRpShort(Number(val));
+              }
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
   }
 
   async function exportDashboardReport() {
@@ -318,86 +410,21 @@
       </div>
 
       {#if isLoadingRevenue}
-        <div class="flex items-center justify-center h-48 text-slate-400 text-sm">Memuat data...</div>
+        <div class="flex items-center justify-center h-64 text-slate-400 text-sm font-medium">Memuat grafik pendapatan...</div>
       {:else if chartPoints.length === 0}
-        <div class="flex items-center justify-center h-48 text-slate-400 text-sm">Tidak ada transaksi di periode ini</div>
+        <div class="flex items-center justify-center h-64 text-slate-400 text-sm font-medium">Tidak ada transaksi di periode ini</div>
       {:else}
-        <div class="overflow-x-auto">
-          <svg
-            width={Math.max(chartPoints.length * 44 + CHART_PAD_LEFT + CHART_PAD_RIGHT, 400)}
-            height={CHART_H + 8}
-            class="block"
-          >
-            <!-- Y axis grid lines & labels -->
-            {#each [0, 0.25, 0.5, 0.75, 1] as frac}
-              {@const gy = barY(chartMax * frac) + barH(chartMax * frac)}
-              <line x1={CHART_PAD_LEFT} y1={gy} x2={chartPoints.length * 44 + CHART_PAD_LEFT} y2={gy}
-                stroke="#e2e8f0" stroke-width="1" />
-              <text x={CHART_PAD_LEFT - 4} y={gy + 3} text-anchor="end" font-size="8" fill="#94a3b8" font-family="monospace">
-                {yLabel(frac)}
-              </text>
-            {/each}
-
-            <!-- Bars -->
-            {#each chartPoints as d, i}
-              {@const bw = 16}
-              {@const gap = 44}
-              {@const x = CHART_PAD_LEFT + i * gap}
-
-              <!-- Omset bar -->
-              <rect
-                x={x + 2}
-                y={barY(d.omset)}
-                width={bw}
-                height={barH(d.omset)}
-                rx="3"
-                fill="#0ea5e9"
-                opacity="0.85"
-              />
-              <!-- Profit bar -->
-              <rect
-                x={x + bw + 4}
-                y={barY(d.profit)}
-                width={bw}
-                height={barH(d.profit)}
-                rx="3"
-                fill="#34d399"
-                opacity="0.85"
-              />
-
-              <!-- X label -->
-              <text
-                x={x + bw + 2}
-                y={CHART_H - CHART_PAD_BOTTOM + 14}
-                text-anchor="middle"
-                font-size="8"
-                fill="#64748b"
-                font-family="system-ui"
-              >
-                {shortDate(d.date)}
-              </text>
-
-              <!-- Transaction count dot -->
-              {#if d.transactions > 0}
-                <text x={x + bw + 2} y={barY(d.omset) - 3} text-anchor="middle" font-size="7" fill="#0ea5e9" font-family="monospace">
-                  {d.transactions}
-                </text>
-              {/if}
-            {/each}
-
-            <!-- Y axis line -->
-            <line x1={CHART_PAD_LEFT} y1={CHART_PAD_TOP} x2={CHART_PAD_LEFT} y2={CHART_H - CHART_PAD_BOTTOM}
-              stroke="#cbd5e1" stroke-width="1" />
-          </svg>
+        <div class="relative w-full h-72">
+          <canvas bind:this={canvasEl}></canvas>
         </div>
 
         <!-- Summary row below chart -->
-        <div class="grid grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 pt-3 border-t border-slate-100">
           {#each chartPoints.slice(-7) as d}
-            <div class="text-center">
-              <p class="text-[9px] text-slate-400 font-mono">{d.date}</p>
-              <p class="text-xs font-bold text-sky-700">{formatRpShort(d.omset)}</p>
-              <p class="text-[10px] text-emerald-600 font-semibold">{formatRpShort(d.profit)}</p>
+            <div class="text-center p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <p class="text-[10px] text-slate-500 font-mono font-bold">{shortDate(d.date, chartPoints.length)}</p>
+              <p class="text-xs font-black text-sky-600 mt-0.5">{formatRpShort(d.omset)}</p>
+              <p class="text-[10px] text-emerald-600 font-bold">{formatRpShort(d.profit)} profit</p>
             </div>
           {/each}
         </div>
