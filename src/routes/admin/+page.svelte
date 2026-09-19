@@ -10,31 +10,27 @@
     Download
   } from 'lucide-svelte';
 
+  let isLoading = true;
+
   let analytics = {
-    totalOmset: 15450000,
-    netProfit: 3820000,
-    totalTransactions: 248,
-    averageOrderValue: 62298,
-    topProducts: [
-      { name: 'Indomie Goreng Spesial 85g', category: 'Mie & Makanan Instan', soldQty: 320, revenue: 1120000 },
-      { name: 'Aqua Air Mineral 600ml', category: 'Air Mineral & Isotonik', soldQty: 215, revenue: 817000 },
-      { name: 'Chitato Sapi Panggang 68g', category: 'Camilan & Snack', soldQty: 95, revenue: 1092500 },
-      { name: 'Minyak Goreng Bimoli 1L', category: 'Bumbu & Dapur', soldQty: 80, revenue: 1560000 }
-    ],
-    lowStockAlerts: [
-      { name: 'Khong Guan Red Assorted Biscuit 300g', stock: 2, minAlert: 3, category: 'Biskuit & Roti' },
-      { name: 'Rexona Roll On Women 45ml', stock: 3, minAlert: 5, category: 'Sabun & Perawatan' }
-    ]
+    totalOmset: 0,
+    netProfit: 0,
+    totalTransactions: 0,
+    averageOrderValue: 0,
+    topProducts: [] as any[],
+    lowStockAlerts: [] as any[]
   };
 
   onMount(async () => {
     try {
       const res = await fetch('/api/analytics/dashboard').then(r => r.json());
       if (res?.success && res.data) {
-        analytics = { ...analytics, ...res.data };
+        analytics = res.data;
       }
     } catch (e) {
       console.warn('Failed to load dashboard analytics from API', e);
+    } finally {
+      isLoading = false;
     }
   });
 

@@ -67,19 +67,17 @@ async function getDashboardData() {
       category: ls.category || 'Umum'
     }));
 
-    if (totalTransactions > 0 || lowStockAlerts.length > 0 || topProducts.length > 0) {
-      return {
-        success: true,
-        data: {
-          totalOmset: totalOmset || 15450000,
-          netProfit: netProfit || 3820000,
-          totalTransactions: totalTransactions || 248,
-          averageOrderValue: averageOrderValue || 62298,
-          topProducts: topProducts.length > 0 ? topProducts : getFallbackTopProducts(),
-          lowStockAlerts: lowStockAlerts.length > 0 ? lowStockAlerts : getFallbackLowStock()
-        }
-      };
-    }
+    return {
+      success: true,
+      data: {
+        totalOmset,
+        netProfit,
+        totalTransactions,
+        averageOrderValue,
+        topProducts,
+        lowStockAlerts
+      }
+    };
   } catch (e: any) {
     console.warn('DB analytics error, fallback to memoryStore calculations:', e.message);
   }
@@ -146,28 +144,12 @@ function getMemoryStoreAnalytics() {
   return {
     success: true,
     data: {
-      totalOmset: totalOmset || 15450000,
-      netProfit: netProfit || 3820000,
-      totalTransactions: totalTransactions || 248,
-      averageOrderValue: averageOrderValue || 62298,
-      topProducts: sortedTopProducts.length > 0 ? sortedTopProducts : getFallbackTopProducts(),
-      lowStockAlerts: lowStockAlerts.length > 0 ? lowStockAlerts : getFallbackLowStock()
+      totalOmset,
+      netProfit,
+      totalTransactions,
+      averageOrderValue,
+      topProducts: sortedTopProducts,
+      lowStockAlerts
     }
   };
-}
-
-function getFallbackTopProducts() {
-  return [
-    { name: 'Indomie Goreng Spesial 85g', category: 'Mie & Makanan Instan', soldQty: 320, revenue: 1120000 },
-    { name: 'Aqua Air Mineral 600ml', category: 'Air Mineral & Isotonik', soldQty: 215, revenue: 817000 },
-    { name: 'Chitato Sapi Panggang 68g', category: 'Camilan & Snack', soldQty: 95, revenue: 1092500 },
-    { name: 'Minyak Goreng Bimoli 1L', category: 'Bumbu & Dapur', soldQty: 80, revenue: 1560000 }
-  ];
-}
-
-function getFallbackLowStock() {
-  return [
-    { name: 'Khong Guan Red Assorted Biscuit 300g', stock: 2, minAlert: 3, category: 'Biskuit & Roti' },
-    { name: 'Rexona Roll On Women 45ml', stock: 3, minAlert: 5, category: 'Sabun & Perawatan' }
-  ];
 }
