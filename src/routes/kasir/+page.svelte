@@ -778,28 +778,26 @@
   <div class="w-[420px] bg-white flex flex-col justify-between p-4 space-y-4 border-l border-slate-200 shadow-sm h-full overflow-hidden">
     <!-- Header Actions (Hold & Shift) -->
     <div class="flex items-center justify-between border-b border-slate-200 pb-3 shrink-0">
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-2">
         <span class="text-base font-bold text-slate-900">Keranjang Belanja</span>
-        <span class="bg-sky-100 text-sky-700 text-xs px-2.5 py-0.5 rounded-full font-bold">{ $cartItems.length } Item</span>
+        <span class="bg-sky-100 text-sky-700 text-xs px-2.5 py-0.5 rounded-full font-bold ml-1">{ $cartItems.length } Item</span>
       </div>
 
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-3 pl-4">
         <!-- Shift Modal Button -->
         <button
           on:click={() => { showShiftModal = true; fetchLastCloseoutCash(); }}
-          class="px-3 py-1.5 rounded-xl border text-[11px] font-bold flex items-center space-x-2 shadow-sm transition-all {$shiftStore.isClockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 animate-pulse'}"
+          class="px-3 py-1.5 rounded-xl border text-[11px] font-bold flex items-center space-x-1.5 shadow-sm transition-all {$shiftStore.isClockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 animate-pulse'}"
         >
           <Clock class="w-3.5 h-3.5 {$shiftStore.isClockedIn ? 'text-emerald-600' : 'text-amber-600'}" />
-          <span class="flex items-center space-x-2">
-            {#if $shiftStore.isClockedIn}
-              <span class="bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-md font-mono text-[10px] font-bold">{$shiftStore.shiftId || ''}</span>
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>{($authStore?.name || $shiftStore.cashierName || 'Kasir').split(' ')[0]}</span>
-            {:else}
-              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>Mulai Shift</span>
-            {/if}
-          </span>
+          {#if $shiftStore.isClockedIn}
+            <span>{$shiftStore.shiftId || ''}</span>
+            <span class="inline-block w-1 h-1 rounded-full bg-emerald-500 mx-0.5"></span>
+            <span>{($authStore?.name || $shiftStore.cashierName || 'Kasir').split(' ')[0]}</span>
+          {:else}
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span>Mulai Shift</span>
+          {/if}
         </button>
 
         <!-- Hold Carts List Modal -->

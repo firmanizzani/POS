@@ -163,8 +163,8 @@
     profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
 
     const isSinglePoint = chartPoints.length <= 1;
-    const barThicknessVal = isSinglePoint ? 28 : (chartPoints.length <= 8 ? 16 : undefined);
-    const maxBarThicknessVal = isSinglePoint ? 32 : 20;
+    const barThicknessVal = isSinglePoint ? 24 : (chartPoints.length <= 8 ? 14 : undefined);
+    const maxBarThicknessVal = isSinglePoint ? 28 : 18;
 
     chartInstance = new Chart(ctx, {
       type: 'bar',
@@ -176,6 +176,9 @@
             data: omsetData,
             backgroundColor: '#0ea5e9',
             borderRadius: 6,
+            borderWidth: 2,
+            borderColor: '#ffffff',
+            borderSkipped: false,
             barThickness: barThicknessVal,
             maxBarThickness: maxBarThicknessVal,
             barPercentage: 0.65,
@@ -186,6 +189,9 @@
             data: profitData,
             backgroundColor: '#10b981',
             borderRadius: 6,
+            borderWidth: 2,
+            borderColor: '#ffffff',
+            borderSkipped: false,
             barThickness: barThicknessVal,
             maxBarThickness: maxBarThicknessVal,
             barPercentage: 0.65,
