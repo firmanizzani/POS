@@ -1,45 +1,32 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
 import { promos } from '../db/schema.js';
-import { memoryStore } from '../db/store.js';
 
 export const promoRoutes = new Elysia({ prefix: '/promos' })
   .get('/', async () => {
     try {
       const list = await db.select().from(promos);
-      if (list.length > 0) {
-        return {
-          success: true,
-          data: list.map(p => ({
-            code: p.code,
-            title: p.title,
-            type: p.discountType.toUpperCase(),
-            value: p.discountType === 'percentage' ? `${p.discountValue}%` : `Rp ${Number(p.discountValue).toLocaleString('id-ID')}`,
-            minPurchase: Number(p.minPurchase || 0),
-            status: p.isActive ? 'ACTIVE' : 'INACTIVE'
-          }))
-        };
-      }
+      return {
+        success: true,
+        data: list.map(p => ({
+          id: p.id,
+          code: p.code,
+          title: p.title,
+          type: p.discountType.toUpperCase(),
+          value: p.discountType === 'percentage' ? `${p.discountValue}%` : `Rp ${Number(p.discountValue).toLocaleString('id-ID')}`,
+          minPurchase: Number(p.minPurchase || 0),
+          status: p.isActive ? 'ACTIVE' : 'INACTIVE'
+        }))
+      };
     } catch (e: any) {
-      console.warn('DB promos error, fallback to memoryStore:', e.message);
+      console.error('DB promos error:', e.message);
+      return { success: false, message: 'Gagal mengambil data promo: ' + e.message, data: [] };
     }
-
-    const data = memoryStore.promos.map(p => ({
-      code: p.code,
-      title: p.title,
-      type: p.discountType.toUpperCase(),
-      value: p.discountType === 'percentage' ? `${p.discountValue}%` : (p.discountValue.toString().includes('Rp') ? p.discountValue : `Rp ${Number(p.discountValue).toLocaleString('id-ID')}`),
-      minPurchase: Number(p.minPurchase || 0),
-      status: p.isActive ? 'ACTIVE' : 'INACTIVE'
-    }));
-
-    return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
     let maxPrmNum = 0;
     const dbPromos = await db.select({ id: promos.id }).from(promos).catch(() => []);
-    const allPromoIds = [...dbPromos.map(p => p.id), ...memoryStore.promos.map(p => p.id)];
-    const numPromoIds = allPromoIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    const numPromoIds = dbPromos.map(p => parseInt(p.id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
     if (numPromoIds.length > 0) maxPrmNum = Math.max(...numPromoIds);
     const nextPrmNum = maxPrmNum + 1;
 
@@ -61,24 +48,23 @@ export const promoRoutes = new Elysia({ prefix: '/promos' })
 
     try {
       await db.insert(promos).values(newPromo);
+      return {
+        success: true,
+        message: 'Promo berhasil dibuat',
+        data: {
+          id: newPromo.id,
+          code: newPromo.code,
+          title: newPromo.title,
+          type: newPromo.discountType.toUpperCase(),
+          value: body.value,
+          minPurchase: Number(newPromo.minPurchase),
+          status: 'ACTIVE'
+        }
+      };
     } catch (e: any) {
-      console.warn('DB insert promo error:', e.message);
+      console.error('DB insert promo error:', e.message);
+      return { success: false, message: 'Gagal membuat promo: ' + e.message };
     }
-
-    memoryStore.promos.unshift(newPromo);
-
-    return {
-      success: true,
-      message: 'Promo berhasil dibuat',
-      data: {
-        code: newPromo.code,
-        title: newPromo.title,
-        type: newPromo.discountType.toUpperCase(),
-        value: body.value,
-        minPurchase: Number(newPromo.minPurchase),
-        status: 'ACTIVE'
-      }
-    };
   }, {
     body: t.Object({
       code: t.String(),

@@ -1,8 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
-import { eq, and } from 'drizzle-orm';
-import { memoryStore } from '../db/store.js';
+import { eq } from 'drizzle-orm';
 
 export const authRoutes = new Elysia({ prefix: '/auth' })
   // Login Cashier / Admin with Email & PIN
@@ -11,7 +10,6 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
     const pinInput = body.pinCode?.trim();
 
     try {
-      // 1. Try querying DB
       const dbUsers = await db.select().from(users);
       const matchedDbUser = dbUsers.find(u => 
         (emailInput ? u.email.toLowerCase() === emailInput : true) && u.pinCode === pinInput
@@ -31,26 +29,7 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
         };
       }
     } catch (e: any) {
-      console.warn('DB auth query error, fallback to memoryStore:', e.message);
-    }
-
-    // 2. Fallback to memoryStore users
-    const matchedMemUser = memoryStore.users.find(u =>
-      (emailInput ? u.email.toLowerCase() === emailInput : true) && u.pinCode === pinInput
-    );
-
-    if (matchedMemUser) {
-      return {
-        success: true,
-        message: `Login ${matchedMemUser.role === 'admin' ? 'Admin' : 'Kasir'} Berhasil`,
-        token: `jwt-token-${Date.now()}`,
-        user: {
-          id: matchedMemUser.id,
-          name: matchedMemUser.name,
-          email: matchedMemUser.email,
-          role: matchedMemUser.role
-        }
-      };
+      console.error('DB auth query error:', e.message);
     }
 
     return {

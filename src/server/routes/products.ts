@@ -2,7 +2,6 @@ import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
 import { products, categories } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { memoryStore } from '../db/store.js';
 
 export const productRoutes = new Elysia({ prefix: '/products' })
   .get('/', async () => {
@@ -25,55 +24,39 @@ export const productRoutes = new Elysia({ prefix: '/products' })
       .from(products)
       .leftJoin(categories, eq(products.categoryId, categories.id));
 
-      if (allProducts && allProducts.length > 0) {
-        return {
-          success: true,
-          data: allProducts.map(p => ({
-            ...p,
-            costPrice: Number(p.costPrice),
-            sellPrice: Number(p.sellPrice)
-          }))
-        };
-      }
+      return {
+        success: true,
+        data: allProducts.map(p => ({
+          ...p,
+          categoryName: p.categoryName || 'Lainnya',
+          costPrice: Number(p.costPrice),
+          sellPrice: Number(p.sellPrice)
+        }))
+      };
     } catch (error: any) {
-      console.warn('GET /products DB query failed, using memory fallback:', error.message || error);
+      console.error('GET /products DB query failed:', error.message || error);
+      return { success: false, message: 'Gagal mengambil data produk: ' + error.message, data: [] };
     }
-
-    // Fallback if DB returns 0 items or connection issue
-    const categoryMap = new Map(memoryStore.categories.map(c => [c.id, c.name]));
-    const data = memoryStore.products.map(p => ({
-      ...p,
-      categoryName: categoryMap.get(p.categoryId || '') || 'Lainnya',
-      costPrice: Number(p.costPrice),
-      sellPrice: Number(p.sellPrice)
-    }));
-
-    return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
-    // 1. Tentukan ID produk berikutnya (+1)
     let nextIdNum = 101;
     const dbMaxId = await db.select({ id: products.id }).from(products).catch(() => []);
-    const allIds = [...dbMaxId.map(p => p.id), ...memoryStore.products.map(p => p.id)];
-    const numIds = allIds
-      .map(id => parseInt(id.replace(/[^0-9]/g, ''), 10))
+    const numIds = dbMaxId
+      .map(p => parseInt(p.id.replace(/[^0-9]/g, ''), 10))
       .filter(n => !isNaN(n));
     if (numIds.length > 0) {
       nextIdNum = Math.max(...numIds) + 1;
     }
     const id = `prod-${nextIdNum}`;
 
-    // 2. Selalu hitung Barcode produk berikutnya (+1) dari barcode terbesar yang ada
     let maxBarcodeNum = 899100000000;
     const dbBarcodes = await db.select({ barcode: products.barcode }).from(products).catch(() => []);
-    const allBarcodes = [...dbBarcodes.map(p => p.barcode), ...memoryStore.products.map(p => p.barcode)];
-    const numBarcodes = allBarcodes
-      .map(b => parseInt(b, 10))
+    const numBarcodes = dbBarcodes
+      .map(b => parseInt(b.barcode, 10))
       .filter(n => !isNaN(n));
     if (numBarcodes.length > 0) {
       maxBarcodeNum = Math.max(...numBarcodes);
     }
-    // Jika body.barcode berupa angka unik yang dikirim manual dan valid (bukan barcode default awal yang diisi otomatis), atau kita langsung generate (+1)
     const barcode = (maxBarcodeNum + 1).toString();
 
     const newProd = {
@@ -95,14 +78,10 @@ export const productRoutes = new Elysia({ prefix: '/products' })
 
     try {
       await db.insert(products).values(newProd);
-      // Sinkronkan juga ke memoryStore
-      memoryStore.products.push(newProd as any);
       return { success: true, message: 'Produk berhasil ditambahkan ke database', data: newProd };
     } catch (error: any) {
       console.error('DB insert failed:', error.message);
-      // Simpan ke memoryStore jika DB fail
-      memoryStore.products.push(newProd as any);
-      return { success: true, message: 'Produk berhasil ditambahkan ke memoryStore (DB warning)', data: newProd };
+      return { success: false, message: 'Gagal menambahkan produk ke database: ' + error.message };
     }
   }, {
     body: t.Object({
@@ -141,7 +120,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
 
       return {
         success: true,
-        message: 'Produk berhasil diupdate di database Neon',
+        message: 'Produk berhasil diupdate di database',
         data: {
           id: params.id,
           barcode: body.barcode,
@@ -163,7 +142,7 @@ export const productRoutes = new Elysia({ prefix: '/products' })
   .delete('/:id', async ({ params }: { params: { id: string } }) => {
     try {
       await db.delete(products).where(eq(products.id, params.id));
-      return { success: true, message: 'Produk berhasil dihapus dari database Neon' };
+      return { success: true, message: 'Produk berhasil dihapus dari database' };
     } catch (error: any) {
       console.error('DB delete failed:', error.message);
       return { success: false, message: 'Gagal menghapus produk dari database: ' + error.message };

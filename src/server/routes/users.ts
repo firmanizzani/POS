@@ -2,45 +2,31 @@ import { Elysia, t } from 'elysia';
 import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { memoryStore } from '../db/store.js';
 
 export const userRoutes = new Elysia({ prefix: '/users' })
   .get('/', async () => {
     try {
       const list = await db.select().from(users);
-      if (list.length > 0) {
-        return {
-          success: true,
-          data: list.map(u => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            pinCode: u.pinCode || '',
-            role: u.role as 'admin' | 'cashier',
-            createdAt: u.createdAt ? new Date(u.createdAt).toISOString().slice(0, 10) : '2026-09-01'
-          }))
-        };
-      }
+      return {
+        success: true,
+        data: list.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          pinCode: u.pinCode || '',
+          role: u.role as 'admin' | 'cashier',
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString().slice(0, 10) : '2026-09-01'
+        }))
+      };
     } catch (e: any) {
-      console.warn('DB users error, using memoryStore:', e.message);
+      console.error('DB users error:', e.message);
+      return { success: false, message: 'Gagal mengambil data user: ' + e.message, data: [] };
     }
-
-    const data = memoryStore.users.map(u => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      pinCode: u.pinCode || '',
-      role: u.role as 'admin' | 'cashier',
-      createdAt: '2026-09-01'
-    }));
-
-    return { success: true, data };
   })
   .post('/', async ({ body }: { body: any }) => {
     let maxUserNum = 0;
     const dbUsers = await db.select({ id: users.id }).from(users).catch(() => []);
-    const allUserIds = [...dbUsers.map(u => u.id), ...memoryStore.users.map(u => u.id)];
-    const numUserIds = allUserIds.map(id => parseInt(id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
+    const numUserIds = dbUsers.map(u => parseInt(u.id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
     if (numUserIds.length > 0) maxUserNum = Math.max(...numUserIds);
     const nextUserNum = maxUserNum + 1;
 
@@ -56,24 +42,22 @@ export const userRoutes = new Elysia({ prefix: '/users' })
 
     try {
       await db.insert(users).values(newUser);
+      return {
+        success: true,
+        message: 'Akun berhasil dibuat',
+        data: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          pinCode: newUser.pinCode,
+          role: newUser.role,
+          createdAt: newUser.createdAt.toISOString().slice(0, 10)
+        }
+      };
     } catch (e: any) {
-      console.warn('DB insert user error:', e.message);
+      console.error('DB insert user error:', e.message);
+      return { success: false, message: 'Gagal membuat akun: ' + e.message };
     }
-
-    memoryStore.users.push(newUser);
-
-    return {
-      success: true,
-      message: 'Akun berhasil dibuat',
-      data: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        pinCode: newUser.pinCode,
-        role: newUser.role,
-        createdAt: newUser.createdAt.toISOString().slice(0, 10)
-      }
-    };
   }, {
     body: t.Object({
       name: t.String(),
@@ -92,31 +76,19 @@ export const userRoutes = new Elysia({ prefix: '/users' })
           role: body.role
         })
         .where(eq(users.id, params.id));
+
+      return { success: true, message: 'Akun berhasil diperbarui' };
     } catch (e: any) {
-      console.warn('DB update user error:', e.message);
+      console.error('DB update user error:', e.message);
+      return { success: false, message: 'Gagal memperbarui akun: ' + e.message };
     }
-
-    const idx = memoryStore.users.findIndex(u => u.id === params.id);
-    if (idx !== -1) {
-      memoryStore.users[idx] = {
-        ...memoryStore.users[idx],
-        name: body.name ?? memoryStore.users[idx].name,
-        email: body.email ?? memoryStore.users[idx].email,
-        pinCode: body.pinCode ?? memoryStore.users[idx].pinCode,
-        role: body.role ?? memoryStore.users[idx].role
-      };
-    }
-
-    return { success: true, message: 'Akun berhasil diperbarui' };
   })
   .delete('/:id', async ({ params }: { params: { id: string } }) => {
     try {
       await db.delete(users).where(eq(users.id, params.id));
+      return { success: true, message: 'Akun berhasil dihapus' };
     } catch (e: any) {
-      console.warn('DB delete user error:', e.message);
+      console.error('DB delete user error:', e.message);
+      return { success: false, message: 'Gagal menghapus akun: ' + e.message };
     }
-
-    memoryStore.users = memoryStore.users.filter(u => u.id !== params.id);
-
-    return { success: true, message: 'Akun berhasil dihapus' };
   });
