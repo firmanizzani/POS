@@ -37,38 +37,8 @@ export const initialUsers = [
   { id: 'user-kasir-2', name: 'Budi Kasir', email: 'budi@minimarket.com', role: 'cashier', pinCode: '222222' }
 ];
 
-export const initialShifts = [
-  {
-    id: 'shift-1001',
-    userId: 'user-kasir-1',
-    cashierName: 'Ahmad Kasir',
-    clockIn: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-    clockOut: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    startingCash: 200000,
-    salesCash: 450000,
-    withdrawalsTotal: 0,
-    expectedCash: 650000,
-    actualCash: 650000,
-    difference: 0,
-    notes: 'Shift Pagi - Uang Laci Impas',
-    status: 'closed'
-  },
-  {
-    id: 'shift-1002',
-    userId: 'user-kasir-2',
-    cashierName: 'Budi Kasir',
-    clockIn: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    clockOut: null,
-    startingCash: 200000,
-    salesCash: 125000,
-    withdrawalsTotal: 0,
-    expectedCash: 325000,
-    actualCash: null,
-    difference: null,
-    notes: 'Shift Sore Berjalan',
-    status: 'open'
-  }
-];
+export const initialShifts: any[] = [];
+export const initialTransactions: any[] = [];
 
 export const initialMembers = [
   { id: 'mbr-1', memberCode: 'MBR-001', name: 'Siti Rahma', phone: '081298765432', points: 450, tier: 'GOLD' },
