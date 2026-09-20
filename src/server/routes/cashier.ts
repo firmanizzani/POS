@@ -401,4 +401,102 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       console.error('DB checkout transaction error:', e.message);
       return { success: false, message: 'Gagal memproses transaksi: ' + e.message };
     }
+  })
+
+  // Shift Management: Owner Cash Withdrawal
+  .post('/shift/withdraw', async ({ body }: { body: any }) => {
+    try {
+      const shiftId = body.shiftId;
+      const amount = Number(body.amount || 0);
+      const notes = body.notes || 'Diambil Owner';
+      const withdrawnBy = body.withdrawnBy || 'Owner';
+
+      if (!shiftId || amount <= 0) {
+        return { success: false, message: 'Shift ID dan nominal pengambilan wajib diisi' };
+      }
+
+      // Load existing shift
+      const shifts = await db.select().from(cashierShifts).where(eq(cashierShifts.id, shiftId));
+      if (shifts.length === 0) return { success: false, message: 'Shift tidak ditemukan' };
+      const shift = shifts[0];
+
+      // Parse existing withdrawals from notes JSON field (lightweight storage)
+      let withdrawalsHistory: any[] = [];
+      let existingNotes = shift.notes || '';
+      try {
+        const parsed = JSON.parse(existingNotes);
+        if (parsed.withdrawals) withdrawalsHistory = parsed.withdrawals;
+      } catch {}
+
+      const newWithdrawal = {
+        id: `wd-${Date.now()}`,
+        amount,
+        notes,
+        withdrawnBy,
+        timestamp: new Date().toISOString()
+      };
+      withdrawalsHistory.push(newWithdrawal);
+
+      const totalWithdrawals = withdrawalsHistory.reduce((s: number, w: any) => s + Number(w.amount), 0);
+
+      // Save back as JSON in notes
+      const newNotes = JSON.stringify({ withdrawals: withdrawalsHistory });
+      await db.update(cashierShifts)
+        .set({ notes: newNotes })
+        .where(eq(cashierShifts.id, shiftId));
+
+      return {
+        success: true,
+        message: 'Pengambilan owner berhasil dicatat',
+        data: { totalWithdrawals, withdrawalsHistory }
+      };
+    } catch (e: any) {
+      console.error('DB withdraw error:', e.message);
+      return { success: false, message: 'Gagal mencatat pengambilan: ' + e.message };
+    }
+  }, {
+    body: t.Object({
+      shiftId: t.String(),
+      amount: t.Number(),
+      notes: t.Optional(t.String()),
+      withdrawnBy: t.Optional(t.String())
+    })
+  })
+
+  // Shift Management: Cancel Owner Withdrawal
+  .post('/shift/withdraw/cancel', async ({ body }: { body: any }) => {
+    try {
+      const shiftId = body.shiftId;
+      const withdrawalId = body.withdrawalId;
+
+      const shifts = await db.select().from(cashierShifts).where(eq(cashierShifts.id, shiftId));
+      if (shifts.length === 0) return { success: false, message: 'Shift tidak ditemukan' };
+      const shift = shifts[0];
+
+      let withdrawalsHistory: any[] = [];
+      try {
+        const parsed = JSON.parse(shift.notes || '');
+        if (parsed.withdrawals) withdrawalsHistory = parsed.withdrawals;
+      } catch {}
+
+      withdrawalsHistory = withdrawalsHistory.filter((w: any) => w.id !== withdrawalId);
+      const totalWithdrawals = withdrawalsHistory.reduce((s: number, w: any) => s + Number(w.amount), 0);
+
+      const newNotes = JSON.stringify({ withdrawals: withdrawalsHistory });
+      await db.update(cashierShifts).set({ notes: newNotes }).where(eq(cashierShifts.id, shiftId));
+
+      return {
+        success: true,
+        message: 'Pengambilan berhasil dibatalkan',
+        data: { totalWithdrawals, withdrawalsHistory }
+      };
+    } catch (e: any) {
+      console.error('DB cancel withdraw error:', e.message);
+      return { success: false, message: 'Gagal membatalkan pengambilan: ' + e.message };
+    }
+  }, {
+    body: t.Object({
+      shiftId: t.String(),
+      withdrawalId: t.String()
+    })
   });
