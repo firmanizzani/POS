@@ -71,18 +71,18 @@
   </div>
 
   <!-- Rules Information Banner -->
-  <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between text-xs text-amber-900 shadow-sm">
+  <div class="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-center justify-between text-xs text-sky-900 shadow-sm">
     <div class="space-y-1">
-      <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800">Aturan Tier Keanggotaan (Total Pembelanjaan)</span>
+      <span class="font-bold uppercase tracking-wider text-[11px] text-sky-800">Aturan Tier Keanggotaan (Total Pembelanjaan)</span>
       <p class="text-slate-600">
-        • 🥉 <strong>BRONZE</strong>: Total belanja di bawah <strong>Rp 2.000.000</strong> (&lt; 10.000 Poin).<br/>
-        • 🥈 <strong>SILVER</strong>: Total belanja <strong>Rp 2.000.000 – Rp 5.000.000</strong> (10.000 – 24.999 Poin).<br/>
-        • 🥇 <strong>GOLD</strong>: Total belanja di atas <strong>Rp 5.000.000</strong> (&ge; 25.000 Poin).
+        • <strong>BRONZE</strong>: Total belanja di bawah <strong>Rp 2.000.000</strong> (&lt; 10.000 Poin).<br/>
+        • <strong>SILVER</strong>: Total belanja <strong>Rp 2.000.000 – Rp 5.000.000</strong> (10.000 – 24.999 Poin).<br/>
+        • <strong>GOLD</strong>: Total belanja di atas <strong>Rp 5.000.000</strong> (&ge; 25.000 Poin).
       </p>
     </div>
   </div>
 
-  <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm overflow-x-auto">
     <table class="w-full text-left text-xs text-slate-700">
       <thead class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200">
         <tr>
@@ -106,19 +106,19 @@
             <td class="p-3 text-right font-mono font-bold text-slate-900 text-sm">
               {formatRp(m.totalSpend || 0)}
             </td>
-            <td class="p-3 text-center font-bold text-amber-600 font-mono text-sm">{m.points} pts</td>
+            <td class="p-3 text-center font-bold text-sky-600 font-mono text-sm">{m.points} pts</td>
             <td class="p-3 text-center">
               {#if m.tier === 'GOLD'}
                 <span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-amber-100 text-amber-800 border border-amber-300">
-                  🥇 GOLD
+                  GOLD
                 </span>
               {:else if m.tier === 'SILVER'}
                 <span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-slate-100 text-slate-700 border border-slate-300">
-                  🥈 SILVER
+                  SILVER
                 </span>
               {:else}
                 <span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-orange-50 text-orange-800 border border-orange-200">
-                  🥉 BRONZE
+                  BRONZE
                 </span>
               {/if}
             </td>

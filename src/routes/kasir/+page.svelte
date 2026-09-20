@@ -683,9 +683,9 @@
   }
 </script>
 
-<div class="flex-1 flex overflow-hidden bg-slate-50 h-full">
+<div class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden bg-slate-50 h-full">
   <!-- LEFT: Tap-Tap Product Catalog & Barcode Search (Light Theme) -->
-  <div class="flex-1 flex flex-col border-r border-slate-200 p-4 space-y-4 overflow-hidden bg-slate-50 h-full">
+  <div class="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 p-3 sm:p-4 space-y-4 overflow-y-auto lg:overflow-hidden bg-slate-50 min-h-0">
     <!-- Top Search & Barcode Bar -->
     <div class="flex items-center space-x-3 shrink-0">
       <div class="relative flex-1">
@@ -775,7 +775,7 @@
   </div>
 
   <!-- RIGHT: Cart, Actions & Checkout Panel (Light Theme) -->
-  <div class="w-[420px] bg-white flex flex-col justify-between p-4 space-y-4 border-l border-slate-200 shadow-sm h-full overflow-hidden">
+  <div class="w-full lg:w-[420px] bg-white flex flex-col justify-between p-3 sm:p-4 space-y-4 border-t lg:border-t-0 lg:border-l border-slate-200 shadow-sm shrink-0">
     <!-- Header Actions (Hold & Shift) -->
     <div class="flex items-center justify-between border-b border-slate-200 pb-3 shrink-0">
       <div class="flex items-center space-x-2">

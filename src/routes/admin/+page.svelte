@@ -414,12 +414,12 @@
       </div>
 
       <!-- Summary row below chart -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 pt-2 border-t border-slate-100">
-        {#each chartPoints.slice(-7) as d}
-          <div class="text-center p-1.5 rounded-lg bg-slate-50 border border-slate-100">
-            <p class="text-[9px] text-slate-500 font-mono font-bold">{shortDate(d.date, chartPoints.length)}</p>
-            <p class="text-[11px] font-black text-sky-600 mt-0.5">{formatRpShort(d.omset)}</p>
-            <p class="text-[9px] text-emerald-600 font-bold">{formatRpShort(d.profit)} profit</p>
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1 pt-2 border-t border-slate-100 overflow-x-auto">
+        {#each (selectedPeriod === 'daily' ? chartPoints : chartPoints.slice(-8)) as d}
+          <div class="text-center p-1 sm:p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center min-w-0">
+            <p class="text-[8.5px] sm:text-[9px] text-slate-500 font-mono font-bold truncate">{shortDate(d.date, chartPoints.length)}</p>
+            <p class="text-[10px] sm:text-[11px] font-black text-sky-600 mt-0.5 truncate">{formatRpShort(d.omset)}</p>
+            <p class="text-[8.5px] sm:text-[9px] text-emerald-600 font-bold truncate">{formatRpShort(d.profit)} profit</p>
           </div>
         {/each}
       </div>
