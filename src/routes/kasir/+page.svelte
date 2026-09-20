@@ -108,11 +108,23 @@
           shiftId: s.id,
           cashierId: user.id,
           cashierName: user.name,
-          startingCash: Number(s.startingCash || 200000),
+          startingCash: Number(s.startingCash || 0),
           salesCash: Number(s.salesCash || 0),
           withdrawalsTotal: Number(s.withdrawalsTotal || 0),
           withdrawalsHistory: s.withdrawalsHistory || [],
           clockInTime: s.clockIn
+        });
+      } else {
+        shiftStore.set({
+          isClockedIn: false,
+          shiftId: null,
+          cashierId: user.id,
+          cashierName: user.name,
+          startingCash: 0,
+          salesCash: 0,
+          withdrawalsTotal: 0,
+          withdrawalsHistory: [],
+          clockInTime: null
         });
       }
     } catch (e) {

@@ -39,11 +39,11 @@ export interface HeldCart {
 
 // 1. Shift Store
 export const shiftStore = writable<ShiftState>({
-  isClockedIn: true,
-  shiftId: 'shift-1002',
+  isClockedIn: false,
+  shiftId: null,
   cashierId: null,
   cashierName: '',
-  startingCash: 200000,
+  startingCash: 0,
   salesCash: 0,
   withdrawalsTotal: 0,
   withdrawalsHistory: [],
