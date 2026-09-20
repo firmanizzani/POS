@@ -13,5 +13,5 @@ VecMart is a web application for managing retail store operations, point of sale
 ## Tech Stack
 
 - **Frontend:** SvelteKit, TypeScript, Vite, Tailwind CSS, Lucide Svelte, Chart.js
-- **Backend:** ElysiaJS, Node.js, Drizzle ORM, PostgreSQL (Via NeonDB)
+- **Backend:** Bun, ElysiaJS, Drizzle ORM, PostgreSQL (Via NeonDB)
 - **Deployment:** Vercel
