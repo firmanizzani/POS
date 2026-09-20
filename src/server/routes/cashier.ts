@@ -61,9 +61,22 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
 
     for (const s of shiftsFromDb) {
       const existing = shiftMap.get(s.id) || {};
-      const dbStartingCash = s.startingCash !== null && s.startingCash !== undefined ? Number(s.startingCash) : null;
-      const dbExpectedCash = s.expectedCash !== null && s.expectedCash !== undefined ? Number(s.expectedCash) : null;
-      const dbActualCash = s.actualCash !== null && s.actualCash !== undefined ? Number(s.actualCash) : null;
+      let dbStartingCash = s.startingCash !== null && s.startingCash !== undefined ? Number(s.startingCash) : null;
+      let dbExpectedCash = s.expectedCash !== null && s.expectedCash !== undefined ? Number(s.expectedCash) : null;
+      let dbActualCash = s.actualCash !== null && s.actualCash !== undefined ? Number(s.actualCash) : null;
+
+      // Fix bug where small numbers (e.g. 668 instead of 668000 or truncated values) might occur in DB
+      if (dbStartingCash !== null && dbStartingCash > 0 && dbStartingCash < 1000) {
+        dbStartingCash = dbStartingCash * 1000;
+      }
+      if (dbExpectedCash !== null && dbExpectedCash > 0 && dbExpectedCash < 1000) {
+        dbExpectedCash = dbExpectedCash * 1000;
+      }
+      if (dbActualCash !== null && dbActualCash > 0 && dbActualCash < 1000) {
+        dbActualCash = dbActualCash * 1000;
+      }
+
+      const isClosed = s.status === 'closed' || existing.status === 'closed';
 
       shiftMap.set(s.id, {
         ...existing,
@@ -71,12 +84,12 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         userId: s.userId,
         cashierName: s.cashierName || userMap.get(s.userId) || existing.cashierName || 'Kasir',
         clockIn: s.clockIn ? new Date(s.clockIn).toISOString() : (existing.clockIn || new Date().toISOString()),
-        clockOut: s.clockOut ? new Date(s.clockOut).toISOString() : (s.status === 'closed' ? existing.clockOut : null),
+        clockOut: s.clockOut ? new Date(s.clockOut).toISOString() : (isClosed ? (existing.clockOut || new Date().toISOString()) : null),
         startingCash: dbStartingCash !== null ? dbStartingCash : (existing.startingCash ?? 200000),
         expectedCash: dbExpectedCash !== null ? dbExpectedCash : existing.expectedCash,
         actualCash: dbActualCash !== null ? dbActualCash : existing.actualCash,
         notes: s.notes || existing.notes || '',
-        status: s.status === 'closed' ? 'closed' : (s.status || existing.status || 'open')
+        status: isClosed ? 'closed' : 'open'
       });
     }
 
@@ -243,7 +256,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       if (memActiveShift) {
         activeShift = { ...memActiveShift, cashierName: cashier.name };
       } else {
-        let startingCash = 200000;
+        let startingCash = 0;
         try {
           const allDbShifts = await db.select({
             id: cashierShifts.id,
@@ -322,9 +335,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
       if (latestShift) {
         startingCash = latestShift.actualCash !== null && latestShift.actualCash !== undefined
           ? Number(latestShift.actualCash)
-          : Number(latestShift.expectedCash || 200000);
-      } else {
-        startingCash = 200000;
+          : Number(latestShift.expectedCash || 0);
       }
     }
 
