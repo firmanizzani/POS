@@ -414,15 +414,27 @@
       </div>
 
       <!-- Summary row below chart -->
-      <div class="flex flex-wrap justify-center gap-1.5 pt-2 border-t border-slate-100 w-full">
-        {#each (selectedPeriod === 'daily' ? chartPoints : chartPoints.slice(-8)) as d}
-          <div class="text-center p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center min-w-[95px] flex-1 max-w-[125px]">
-            <p class="text-[8.5px] sm:text-[9px] text-slate-500 font-mono font-bold truncate">{shortDate(d.date, chartPoints.length)}</p>
-            <p class="text-[10px] sm:text-[11px] font-black text-sky-600 mt-0.5 truncate">{formatRpShort(d.omset)}</p>
-            <p class="text-[8.5px] sm:text-[9px] text-emerald-600 font-bold truncate">{formatRpShort(d.profit)} profit</p>
-          </div>
-        {/each}
-      </div>
+      {#if selectedPeriod === 'daily'}
+        <div class="flex flex-wrap justify-center gap-1.5 pt-2 border-t border-slate-100 w-full">
+          {#each chartPoints as d}
+            <div class="text-center p-1.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center min-w-[90px] flex-1 max-w-[115px]">
+              <p class="text-[8.5px] sm:text-[9px] text-slate-500 font-mono font-bold truncate">{shortDate(d.date, chartPoints.length)}</p>
+              <p class="text-[10px] sm:text-[11px] font-black text-sky-600 mt-0.5 truncate">{formatRpShort(d.omset)}</p>
+              <p class="text-[8.5px] sm:text-[9px] text-emerald-600 font-bold truncate">{formatRpShort(d.profit)} profit</p>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="flex flex-wrap justify-center gap-2 pt-2 border-t border-slate-100 w-full">
+          {#each chartPoints.slice(-7) as d}
+            <div class="text-center p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center min-w-[125px] flex-1 max-w-[160px] shadow-xs">
+              <p class="text-[10px] text-slate-500 font-mono font-bold">{shortDate(d.date, chartPoints.length)}</p>
+              <p class="text-xs sm:text-sm font-black text-sky-600 mt-1">{formatRpShort(d.omset)}</p>
+              <p class="text-[10px] text-emerald-600 font-bold mt-0.5">{formatRpShort(d.profit)} profit</p>
+            </div>
+          {/each}
+        </div>
+      {/if}
     {/if}
   </div>
 
