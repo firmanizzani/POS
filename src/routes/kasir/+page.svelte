@@ -775,10 +775,10 @@
         <!-- Shift Modal Button -->
         <button
           on:click={() => { showShiftModal = true; fetchLastCloseoutCash(); }}
-          class="px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all {$shiftStore.isClockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 animate-pulse'}"
+          class="px-2 py-1 rounded-lg border text-[11px] font-bold flex items-center space-x-1 shadow-sm transition-all {$shiftStore.isClockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 animate-pulse'}"
         >
-          <Clock class="w-4 h-4 {$shiftStore.isClockedIn ? 'text-emerald-600' : 'text-amber-600'}" />
-          <span>{$shiftStore.isClockedIn ? `Shift Aktif (${$shiftStore.shiftId || ''}) · ${$authStore?.name || $shiftStore.cashierName || 'Kasir'}` : '🟢 MULAI SHIFT'}</span>
+          <Clock class="w-3 h-3 {$shiftStore.isClockedIn ? 'text-emerald-600' : 'text-amber-600'}" />
+          <span>{$shiftStore.isClockedIn ? `${$shiftStore.shiftId || ''} · ${($authStore?.name || $shiftStore.cashierName || 'Kasir').split(' ')[0]}` : '🟢 Mulai Shift'}</span>
         </button>
 
         <!-- Hold Carts List Modal -->

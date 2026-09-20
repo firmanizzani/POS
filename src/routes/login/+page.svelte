@@ -175,26 +175,6 @@
         </button>
       </form>
 
-      <!-- Demo Credentials Box -->
-      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
-        <p class="text-xs font-bold text-amber-800 uppercase tracking-wider">🔑 Demo Akun Testing</p>
-        <div class="space-y-2 text-xs font-mono">
-          <div class="flex justify-between items-center bg-amber-100/80 px-3 py-2 rounded-xl">
-            <div>
-              <span class="font-bold text-amber-900 block">Admin</span>
-              <span class="text-amber-700">admin@minimarket.com</span>
-            </div>
-            <span class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-lg font-bold tracking-widest">123456</span>
-          </div>
-          <div class="flex justify-between items-center bg-amber-100/80 px-3 py-2 rounded-xl">
-            <div>
-              <span class="font-bold text-amber-900 block">Kasir 1</span>
-              <span class="text-amber-700">ahmad@minimarket.com</span>
-            </div>
-            <span class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-lg font-bold tracking-widest">111111</span>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
