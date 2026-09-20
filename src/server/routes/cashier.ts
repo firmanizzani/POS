@@ -134,51 +134,8 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
           status: 'open'
         };
       } else {
-        // Automatic carry-over from last closed shift
-        let startingCash = 0;
-        const closedDbShifts = dbShifts.filter(s => s.status === 'closed');
-        closedDbShifts.sort((a, b) => new Date(b.clockOut || 0).getTime() - new Date(a.clockOut || 0).getTime());
-        const lastClosed = closedDbShifts[0];
-        if (lastClosed) {
-          if (lastClosed.actualCash !== null && lastClosed.actualCash !== undefined) {
-            startingCash = Number(lastClosed.actualCash);
-          } else if (lastClosed.expectedCash !== null && lastClosed.expectedCash !== undefined) {
-            startingCash = Number(lastClosed.expectedCash);
-          }
-        }
-
-        let maxShiftNum = 1000;
-        const numShiftIds = dbShifts.map(s => parseInt(s.id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
-        if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
-        const nextShiftNum = maxShiftNum + 1;
-
-        const now = new Date();
-        activeShift = {
-          id: `shift-${nextShiftNum}`,
-          userId,
-          cashierName,
-          clockIn: now.toISOString(),
-          clockOut: null,
-          startingCash,
-          salesCash: 0,
-          withdrawalsTotal: 0,
-          withdrawalsHistory: [],
-          expectedCash: startingCash,
-          actualCash: null,
-          difference: null,
-          notes: `Shift ${cashierName} Berjalan`,
-          status: 'open'
-        };
-
-        await db.insert(cashierShifts).values({
-          id: activeShift.id,
-          userId,
-          clockIn: now,
-          startingCash: startingCash.toString(),
-          expectedCash: startingCash.toString(),
-          notes: activeShift.notes,
-          status: 'open'
-        }).onConflictDoNothing();
+        // No active shift currently open
+        activeShift = null;
       }
 
       return { success: true, data: activeShift };
@@ -297,46 +254,9 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
         status: 'closed'
       }).where(eq(cashierShifts.id, currentShiftId));
 
-      // Automagically create NEW OPEN SHIFT with carry over starting cash
-      let maxShiftNum = 1000;
-      const dbShifts = await db.select({ id: cashierShifts.id }).from(cashierShifts).catch(() => []);
-      const numShiftIds = dbShifts.map(s => parseInt(s.id.replace(/[^0-9]/g, ''), 10)).filter(n => !isNaN(n));
-      if (numShiftIds.length > 0) maxShiftNum = Math.max(...numShiftIds);
-      const nextShiftNum = maxShiftNum + 1;
-
-      const nextShiftId = `shift-${nextShiftNum}`;
-      const newStartingCash = actualCash;
-
-      const newShift = {
-        id: nextShiftId,
-        userId: body.userId || 'user-kasir-1',
-        cashierName: 'Kasir',
-        clockIn: clockOutTime.toISOString(),
-        clockOut: null,
-        startingCash: newStartingCash,
-        salesCash: 0,
-        withdrawalsTotal: 0,
-        withdrawalsHistory: [],
-        expectedCash: newStartingCash,
-        actualCash: null,
-        difference: null,
-        notes: 'Shift Baru Berjalan',
-        status: 'open'
-      };
-
-      await db.insert(cashierShifts).values({
-        id: nextShiftId,
-        userId: body.userId || 'user-kasir-1',
-        clockIn: clockOutTime,
-        startingCash: newStartingCash.toString(),
-        expectedCash: newStartingCash.toString(),
-        notes: newShift.notes,
-        status: 'open'
-      }).onConflictDoNothing();
-
       return {
         success: true,
-        message: 'Clock-Out Kasir Berhasil & Shift Baru Dibuka',
+        message: 'Clock-Out Kasir Berhasil. Shift Selesai.',
         data: {
           shiftId: currentShiftId,
           clockOut: clockOutTime.toISOString(),
@@ -346,8 +266,7 @@ export const cashierRoutes = new Elysia({ prefix: '/cashier' })
           expectedCash,
           actualCash,
           difference,
-          status: 'closed',
-          newShift
+          status: 'closed'
         }
       };
     } catch (e: any) {

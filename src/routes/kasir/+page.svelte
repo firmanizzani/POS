@@ -232,6 +232,46 @@
     }
   }
 
+  let clockInStartingCashInput: number = 0;
+  let isClockingIn = false;
+
+  async function handleClockIn() {
+    isClockingIn = true;
+    try {
+      const res = await fetch('/api/cashier/shift/clock-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cashierId: $authStore?.id || 'user-kasir-1',
+          startingCash: Number(clockInStartingCashInput || 0)
+        })
+      }).then(r => r.json());
+
+      if (res?.success && res.data) {
+        const s = res.data;
+        shiftStore.set({
+          isClockedIn: true,
+          shiftId: s.id,
+          cashierId: s.userId,
+          cashierName: s.cashierName || $authStore?.name || 'Kasir',
+          startingCash: Number(s.startingCash || 0),
+          salesCash: 0,
+          withdrawalsTotal: 0,
+          withdrawalsHistory: [],
+          clockInTime: s.clockIn
+        });
+        alert(`Shift Berhasil Dimulai! (${s.id})\nKas Awal Laci: ${formatRp(Number(s.startingCash || 0))}`);
+        showShiftModal = false;
+      } else {
+        alert('Gagal memulai shift: ' + (res?.message || 'Error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      isClockingIn = false;
+    }
+  }
+
   async function handleClockOut() {
     if (!clockOutActualCash || clockOutActualCash < 0) {
       alert('Masukkan total nominal uang fisik di laci terlebih dahulu!');
@@ -243,7 +283,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shiftId: $shiftStore.shiftId || 'shift-1002',
+          shiftId: $shiftStore.shiftId || 'shift-1001',
           startingCash: $shiftStore.startingCash,
           totalSalesCash: $shiftStore.salesCash || 0,
           totalWithdrawals: $shiftStore.withdrawalsTotal || 0,
@@ -255,23 +295,20 @@
         const diff = res.data?.difference ?? 0;
         const diffMsg = diff === 0 ? 'Uang Laci IMPAS (Pas 100%)' : (diff > 0 ? `Uang Laci LEBIH +${formatRp(diff)}` : `Uang Laci KURANG ${formatRp(diff)}`);
         
-        // Update frontend shiftStore to the new automatically created shift
-        if (res.data?.newShift) {
-          const ns = res.data.newShift;
-          shiftStore.set({
-            isClockedIn: true,
-            shiftId: ns.id,
-            cashierId: ns.userId,
-            cashierName: ns.cashierName,
-            startingCash: Number(ns.startingCash),
-            salesCash: 0,
-            withdrawalsTotal: 0,
-            withdrawalsHistory: [],
-            clockInTime: ns.clockIn
-          });
-        }
+        // Reset shiftStore to unclocked state
+        shiftStore.set({
+          isClockedIn: false,
+          shiftId: undefined,
+          cashierId: undefined,
+          cashierName: undefined,
+          startingCash: 0,
+          salesCash: 0,
+          withdrawalsTotal: 0,
+          withdrawalsHistory: [],
+          clockInTime: undefined
+        });
 
-        alert(`Shift Berhasil Ditutup!\nRekap: ${diffMsg}\n\nShift Baru (${res.data?.newShift?.id || 'Shift Baru'}) otomatis diaktifkan dengan Kas Awal ${formatRp(Number(clockOutActualCash))}.`);
+        alert(`Shift Berhasil Ditutup & Selesai! (CLOSED)\nRekap Audit: ${diffMsg}\n\nStatus: Shift telah dihentikan.`);
         clockOutActualCash = undefined;
         showShiftModal = false;
       } else {
@@ -716,9 +753,12 @@
 
       <div class="flex items-center space-x-2">
         <!-- Shift Modal Button -->
-        <button on:click={() => (showShiftModal = true)} class="p-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs font-semibold flex items-center space-x-1 shadow-sm">
-          <Clock class="w-4 h-4 text-amber-600" />
-          <span>Shift</span>
+        <button
+          on:click={() => (showShiftModal = true)}
+          class="px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all {$shiftStore.isClockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 animate-pulse'}"
+        >
+          <Clock class="w-4 h-4 {$shiftStore.isClockedIn ? 'text-emerald-600' : 'text-amber-600'}" />
+          <span>{$shiftStore.isClockedIn ? `Shift Aktif (${$shiftStore.shiftId || ''})` : '🟢 MULAI SHIFT'}</span>
         </button>
 
         <!-- Hold Carts List Modal -->
@@ -1102,149 +1142,115 @@
         <div>
           <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
             <Clock class="w-5 h-5 text-sky-600" />
-            <span>Manajemen Shift & Fisik Laci Kasir</span>
+            <span>Manajemen Shift Kasir</span>
           </h3>
-          <p class="text-xs text-slate-500 mt-0.5">Kelola Kas Awal, Penarikan Owner, dan Rekap Laci Kasir</p>
+          <p class="text-xs text-slate-500 mt-0.5">Kelola Mulai Shift, Kas Awal, Penarikan Owner, dan Clock-Out</p>
         </div>
         <button on:click={() => (showShiftModal = false)} class="text-slate-400 hover:text-slate-700">
           <X class="w-5 h-5" />
         </button>
       </div>
 
-      <!-- Ringkasan Shift & Kasir -->
-      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5 text-xs text-slate-700">
-        <div class="flex justify-between items-center">
-          <span class="font-medium text-slate-600">Kasir Shift Aktif:</span>
-          <span class="font-bold text-slate-900 text-sm">{ $authStore?.name || $shiftStore.cashierName }</span>
-        </div>
-
-        <!-- Kas Awal (Modal Laci) -->
-        <div class="flex justify-between items-center border-t border-slate-200/60 pt-2">
-          <div>
-            <span class="font-medium text-slate-600">Kas Awal Laci (Modal):</span>
-            <p class="text-[10px] text-slate-400">Uang kembalian awal di laci</p>
+      {#if !$shiftStore.isClockedIn}
+        <!-- Form Mulai Shift Kasir -->
+        <div class="bg-emerald-50/70 border border-emerald-200 p-5 rounded-2xl space-y-4 text-xs">
+          <div class="flex items-center space-x-2 text-emerald-900 font-bold text-sm">
+            <PlayCircle class="w-5 h-5 text-emerald-600" />
+            <span>Mulai Shift Kasir Baru</span>
           </div>
-          <div class="flex items-center space-x-2">
-            {#if isEditingStartingCash}
-              <input
-                type="number"
-                bind:value={newStartingCashInput}
-                class="w-28 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-mono font-bold focus:outline-none focus:border-sky-600"
-              />
-              <button on:click={handleUpdateStartingCash} class="px-2 py-1 bg-emerald-600 text-white font-bold rounded-lg text-[11px]">Simpan</button>
-            {:else}
-              <span class="font-bold text-emerald-700 text-sm">{formatRp($shiftStore.startingCash)}</span>
-              <button on:click={() => { newStartingCashInput = $shiftStore.startingCash; isEditingStartingCash = true; }} class="text-[11px] text-sky-600 font-bold underline hover:text-sky-800">
-                Ubah
-              </button>
-            {/if}
+          <p class="text-slate-600 leading-relaxed">
+            Shift Anda saat ini belum aktif/berjalan. Masukkan modal uang fisik awal di laci kasir untuk mulai transaksi.
+          </p>
+
+          <div class="space-y-1.5">
+            <label class="font-bold text-slate-700">Nominal Kas Awal Laci (Modal Rp):</label>
+            <input
+              type="number"
+              bind:value={clockInStartingCashInput}
+              placeholder="Masukkan Kas Awal (Contoh: 200000)"
+              class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-600 font-mono font-bold shadow-sm"
+            />
           </div>
-        </div>
 
-        <!-- Penjualan Tunai -->
-        <div class="flex justify-between items-center border-t border-slate-200/60 pt-2">
-          <span class="font-medium text-slate-600">Penjualan Tunai (+):</span>
-          <span class="font-bold text-sky-700">{formatRp($shiftStore.salesCash || 0)}</span>
+          <button
+            on:click={handleClockIn}
+            disabled={isClockingIn}
+            class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center space-x-2"
+          >
+            <PlayCircle class="w-4 h-4" />
+            <span>{isClockingIn ? 'MEMPROSES MULAI SHIFT...' : 'MULAI SHIFT KASIR SEKARANG'}</span>
+          </button>
         </div>
-
-        <!-- Pengambilan Owner -->
-        <div class="flex justify-between items-center border-t border-slate-200/60 pt-2">
-          <div>
-            <span class="font-medium text-slate-600">Pengambilan Fisik Owner (-):</span>
-            <p class="text-[10px] text-amber-600">Setoran/Prive yang diambil dari laci</p>
+      {:else}
+        <!-- Ringkasan Shift Aktif & Rekap Laci -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5 text-xs text-slate-700">
+          <div class="flex justify-between items-center">
+            <span class="font-medium text-slate-600">Shift ID / Kasir:</span>
+            <span class="font-bold text-sky-700 text-sm">{$shiftStore.shiftId} ({ $authStore?.name || $shiftStore.cashierName })</span>
           </div>
-          <span class="font-bold text-red-600">-{formatRp($shiftStore.withdrawalsTotal || 0)}</span>
-        </div>
 
-        <!-- Expected Cash Formula -->
-        <div class="flex justify-between items-center border-t-2 border-slate-300 pt-2 bg-sky-50/50 -mx-4 -mb-4 p-3 rounded-b-2xl">
-          <div>
-            <span class="font-bold text-slate-800 text-xs">Ekspektasi Uang Fisik Laci:</span>
-            <p class="text-[10px] text-sky-800 font-mono">(Kas Awal + Tunai Masuk - Tarik Owner)</p>
-          </div>
-          <span class="font-extrabold text-slate-900 text-base font-mono">
-            {formatRp(($shiftStore.startingCash || 0) + ($shiftStore.salesCash || 0) - ($shiftStore.withdrawalsTotal || 0))}
-          </span>
-        </div>
-      </div>
-
-      <!-- FITUR BARU: Form Pengambilan Uang Fisik oleh Owner (Prive / Cash Drop) -->
-      <div class="bg-amber-50/70 border border-amber-200 p-4 rounded-2xl space-y-3">
-        <div class="flex items-center space-x-2 text-amber-900 font-bold text-xs">
-          <Coins class="w-4 h-4 text-amber-600" />
-          <span>Pengambilan Uang Fisik oleh Owner / Prive (Cash Drop)</span>
-        </div>
-        <p class="text-[11px] text-amber-800">
-          Jika Owner mengambil uang tunai dari laci di tengah shift, catat nominalnya di sini agar perhitungan ekspektasi laci kasir tetap serasi dan tidak selisih tekor.
-        </p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input
-            type="number"
-            bind:value={withdrawAmount}
-            placeholder="Nominal Diambil (Rp)"
-            class="bg-white border border-amber-300 text-slate-900 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-amber-600"
-          />
-          <input
-            type="text"
-            bind:value={withdrawNotes}
-            placeholder="Catatan (misal: Setor Bank)"
-            class="bg-white border border-amber-300 text-slate-900 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-600"
-          />
-        </div>
-
-        <button
-          on:click={handleOwnerWithdrawal}
-          disabled={isWithdrawing}
-          class="w-full py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm transition-all"
-        >
-          {isWithdrawing ? 'MENCATAT...' : 'CATAT PENGAMBILAN OWNER'}
-        </button>
-
-        <!-- Daftar & Opsi Cancel Pengambilan Owner -->
-        {#if $shiftStore.withdrawalsHistory && $shiftStore.withdrawalsHistory.length > 0}
-          <div class="border-t border-amber-200/80 pt-2.5 mt-2 space-y-1.5">
-            <span class="text-[11px] font-bold text-amber-900 block">Riwayat Pengambilan Shift Ini:</span>
-            <div class="space-y-1 max-h-32 overflow-y-auto pr-1">
-              {#each $shiftStore.withdrawalsHistory as item}
-                <div class="flex items-center justify-between bg-white/80 border border-amber-200 px-2.5 py-1.5 rounded-lg text-[11px]">
-                  <div>
-                    <span class="font-bold font-mono text-red-600">-{formatRp(item.amount)}</span>
-                    <span class="text-slate-600 ml-1">({item.notes})</span>
-                  </div>
-                  <button
-                    on:click={() => handleCancelWithdrawal(item.id, item.amount)}
-                    class="px-2 py-0.5 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded text-[10px] transition-colors"
-                  >
-                    Batal
-                  </button>
-                </div>
-              {/each}
+          <!-- Kas Awal (Modal Laci) -->
+          <div class="flex justify-between items-center border-t border-slate-200/60 pt-2">
+            <div>
+              <span class="font-medium text-slate-600">Kas Awal Laci (Modal):</span>
+              <p class="text-[10px] text-slate-400">Uang kembalian awal di laci</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              {#if isEditingStartingCash}
+                <input
+                  type="number"
+                  bind:value={newStartingCashInput}
+                  class="w-28 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-mono font-bold focus:outline-none focus:border-sky-600"
+                />
+                <button on:click={handleUpdateStartingCash} class="px-2 py-1 bg-emerald-600 text-white font-bold rounded-lg text-[11px]">Simpan</button>
+              {:else}
+                <span class="font-bold text-emerald-700 text-sm">{formatRp($shiftStore.startingCash)}</span>
+                <button on:click={() => { newStartingCashInput = $shiftStore.startingCash; isEditingStartingCash = true; }} class="text-[11px] text-sky-600 font-bold underline hover:text-sky-800">
+                  Ubah
+                </button>
+              {/if}
             </div>
           </div>
-        {/if}
-      </div>
 
-      <!-- Clock-Out Section -->
-      <div class="space-y-3 border-t border-slate-200 pt-3">
-        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Rekap & Clock-Out Fisik Laci</h4>
-        <div class="space-y-1">
-          <label class="text-xs text-slate-600 font-medium">Hitung seluruh sisa nominal uang fisik di laci saat ini:</label>
-          <input
-            type="number"
-            bind:value={clockOutActualCash}
-            placeholder="Masukkan total uang fisik di laci (Rp)"
-            class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-600 font-mono font-bold shadow-sm"
-          />
+          <!-- Penjualan Tunai -->
+          <div class="flex justify-between items-center border-t border-slate-200/60 pt-2">
+            <span class="font-medium text-slate-600">Penjualan Tunai (+):</span>
+            <span class="font-bold text-sky-700">{formatRp($shiftStore.salesCash || 0)}</span>
+          </div>
+
+          <!-- Expected Cash Formula -->
+          <div class="flex justify-between items-center border-t-2 border-slate-300 pt-2 bg-sky-50/50 -mx-4 -mb-4 p-3 rounded-b-2xl">
+            <div>
+              <span class="font-bold text-slate-800 text-xs">Ekspektasi Uang Fisik Laci:</span>
+              <p class="text-[10px] text-sky-800 font-mono">(Kas Awal + Tunai Masuk)</p>
+            </div>
+            <span class="font-extrabold text-slate-900 text-base font-mono">
+              {formatRp(($shiftStore.startingCash || 0) + ($shiftStore.salesCash || 0))}
+            </span>
+          </div>
         </div>
-        <button
-          on:click={handleClockOut}
-          disabled={isClockingOut}
-          class="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-red-600/20 transition-all"
-        >
-          {isClockingOut ? 'PROSES CLOCK-OUT...' : 'CLOCK-OUT & CETAK REKAP LACI'}
-        </button>
-      </div>
+
+        <!-- Clock-Out Section -->
+        <div class="space-y-3 border-t border-slate-200 pt-3">
+          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Rekap & Clock-Out Fisik Laci</h4>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-600 font-medium">Hitung seluruh sisa nominal uang fisik di laci saat ini:</label>
+            <input
+              type="number"
+              bind:value={clockOutActualCash}
+              placeholder="Masukkan total uang fisik di laci (Rp)"
+              class="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-600 font-mono font-bold shadow-sm"
+            />
+          </div>
+          <button
+            on:click={handleClockOut}
+            disabled={isClockingOut}
+            class="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-red-600/20 transition-all"
+          >
+            {isClockingOut ? 'PROSES CLOCK-OUT...' : 'STOP SHIFT & HENTIKAN KASIR'}
+          </button>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
