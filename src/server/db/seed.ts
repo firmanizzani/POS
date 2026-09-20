@@ -38,7 +38,6 @@ export const initialUsers = [
 ];
 
 export const initialShifts: any[] = [];
-export const initialTransactions: any[] = [];
 
 export const initialMembers = [
   { id: 'mbr-1', memberCode: 'MBR-001', name: 'Siti Rahma', phone: '081298765432', points: 450, tier: 'GOLD' },
@@ -149,67 +148,7 @@ export const initialStockAdjustments = [
   { id: 'adj-2', productId: 'prod-112', adjustmentQty: -2, reason: 'DAMAGED', notes: 'Kemasan rusak', adjustedBy: 'user-admin-1', createdAt: new Date('2026-09-10') }
 ];
 
-export const initialTransactions = [
-  {
-    id: 'trx-1',
-    invoiceNumber: 'INV-20260910-001',
-    cashierId: 'user-kasir-1',
-    shiftId: null,
-    memberId: 'mbr-1',
-    promoId: null,
-    subtotal: '10500',
-    discountTotal: '0',
-    grandTotal: '10500',
-    paidAmount: '20000',
-    changeAmount: '9500',
-    paymentMethod: 'CASH',
-    earnedPoints: 10,
-    createdAt: new Date('2026-09-10T19:42:00Z'),
-    items: [
-      { id: 'ti-1', transactionId: 'trx-1', productId: 'prod-101', productName: 'Indomie Goreng Spesial 85g', costPrice: '2800', sellPrice: '3500', quantity: 2, subtotal: '7000' },
-      { id: 'ti-2', transactionId: 'trx-1', productId: 'prod-117', productName: 'Le Minerale 600ml', costPrice: '2200', sellPrice: '3500', quantity: 1, subtotal: '3500' }
-    ]
-  },
-  {
-    id: 'trx-2',
-    invoiceNumber: 'INV-20260910-002',
-    cashierId: 'user-kasir-1',
-    shiftId: null,
-    memberId: null,
-    promoId: 'prm-1',
-    subtotal: '31500',
-    discountTotal: '3150',
-    grandTotal: '28350',
-    paidAmount: '28350',
-    changeAmount: '0',
-    paymentMethod: 'QRIS',
-    earnedPoints: 0,
-    createdAt: new Date('2026-09-10T18:15:00Z'),
-    items: [
-      { id: 'ti-3', transactionId: 'trx-2', productId: 'prod-112', productName: 'Chitato Sapi Panggang 68g', costPrice: '9000', sellPrice: '11500', quantity: 1, subtotal: '11500' },
-      { id: 'ti-4', transactionId: 'trx-2', productId: 'prod-124', productName: 'Ultra Milk Full Cream 1000ml', costPrice: '16500', sellPrice: '20000', quantity: 1, subtotal: '20000' }
-    ]
-  },
-  {
-    id: 'trx-3',
-    invoiceNumber: 'INV-20260909-088',
-    cashierId: 'user-admin-1',
-    shiftId: null,
-    memberId: null,
-    promoId: null,
-    subtotal: '24000',
-    discountTotal: '0',
-    grandTotal: '24000',
-    paidAmount: '50000',
-    changeAmount: '26000',
-    paymentMethod: 'CASH',
-    earnedPoints: 0,
-    createdAt: new Date('2026-09-09T14:20:00Z'),
-    items: [
-      { id: 'ti-5', transactionId: 'trx-3', productId: 'prod-141', productName: 'Rinso Anti Noda Deterjen Powder 770g', costPrice: '19500', sellPrice: '24000', quantity: 1, subtotal: '24000' }
-    ]
-  }
-];
+export const initialTransactions: any[] = [];
 
 export async function seedDatabase() {
   console.log('🔄 Cleaning & Seeding Complete Minimarket Database...');

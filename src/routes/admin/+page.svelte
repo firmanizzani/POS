@@ -120,7 +120,10 @@
   }
 
   function shortDate(dateStr: string, totalPoints: number = 7) {
+    if (!dateStr) return '';
+    if (dateStr.includes(':')) return dateStr;
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
     if (totalPoints <= 7) {
       return d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' });
     } else if (totalPoints <= 31) {
@@ -159,9 +162,9 @@
     profitGradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
     profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
 
-    const isSingleDay = chartPoints.length <= 1;
-    const barThicknessVal = isSingleDay ? 28 : undefined;
-    const maxBarThicknessVal = isSingleDay ? 32 : 18;
+    const isSinglePoint = chartPoints.length <= 1;
+    const barThicknessVal = isSinglePoint ? 28 : (chartPoints.length <= 8 ? 16 : undefined);
+    const maxBarThicknessVal = isSinglePoint ? 32 : 20;
 
     chartInstance = new Chart(ctx, {
       type: 'bar',
@@ -175,8 +178,8 @@
             borderRadius: 6,
             barThickness: barThicknessVal,
             maxBarThickness: maxBarThicknessVal,
-            barPercentage: 0.75,
-            categoryPercentage: 0.35
+            barPercentage: 0.65,
+            categoryPercentage: 0.55
           },
           {
             label: 'Profit Bersih (Net)',
@@ -185,8 +188,8 @@
             borderRadius: 6,
             barThickness: barThicknessVal,
             maxBarThickness: maxBarThicknessVal,
-            barPercentage: 0.75,
-            categoryPercentage: 0.35
+            barPercentage: 0.65,
+            categoryPercentage: 0.55
           }
         ]
       },

@@ -330,14 +330,14 @@
         // Reset shiftStore to unclocked state
         shiftStore.set({
           isClockedIn: false,
-          shiftId: undefined,
-          cashierId: undefined,
-          cashierName: undefined,
+          shiftId: null,
+          cashierId: null,
+          cashierName: '',
           startingCash: 0,
           salesCash: 0,
           withdrawalsTotal: 0,
           withdrawalsHistory: [],
-          clockInTime: undefined
+          clockInTime: null
         });
 
         alert(`Shift Berhasil Ditutup & Selesai! (CLOSED)\nRekap Audit: ${diffMsg}\n\nStatus: Shift telah dihentikan.`);
@@ -778,19 +778,28 @@
   <div class="w-[420px] bg-white flex flex-col justify-between p-4 space-y-4 border-l border-slate-200 shadow-sm h-full overflow-hidden">
     <!-- Header Actions (Hold & Shift) -->
     <div class="flex items-center justify-between border-b border-slate-200 pb-3 shrink-0">
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-3">
         <span class="text-base font-bold text-slate-900">Keranjang Belanja</span>
         <span class="bg-sky-100 text-sky-700 text-xs px-2.5 py-0.5 rounded-full font-bold">{ $cartItems.length } Item</span>
       </div>
 
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-3">
         <!-- Shift Modal Button -->
         <button
           on:click={() => { showShiftModal = true; fetchLastCloseoutCash(); }}
-          class="px-2 py-1 rounded-lg border text-[11px] font-bold flex items-center space-x-1 shadow-sm transition-all {$shiftStore.isClockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 animate-pulse'}"
+          class="px-3 py-1.5 rounded-xl border text-[11px] font-bold flex items-center space-x-2 shadow-sm transition-all {$shiftStore.isClockedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 animate-pulse'}"
         >
-          <Clock class="w-3 h-3 {$shiftStore.isClockedIn ? 'text-emerald-600' : 'text-amber-600'}" />
-          <span>{$shiftStore.isClockedIn ? `${$shiftStore.shiftId || ''} · ${($authStore?.name || $shiftStore.cashierName || 'Kasir').split(' ')[0]}` : '🟢 Mulai Shift'}</span>
+          <Clock class="w-3.5 h-3.5 {$shiftStore.isClockedIn ? 'text-emerald-600' : 'text-amber-600'}" />
+          <span class="flex items-center space-x-2">
+            {#if $shiftStore.isClockedIn}
+              <span class="bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-md font-mono text-[10px] font-bold">{$shiftStore.shiftId || ''}</span>
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>{($authStore?.name || $shiftStore.cashierName || 'Kasir').split(' ')[0]}</span>
+            {:else}
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Mulai Shift</span>
+            {/if}
+          </span>
         </button>
 
         <!-- Hold Carts List Modal -->
@@ -1229,10 +1238,13 @@
 
       {:else}
         <!-- Ringkasan Shift Aktif -->
-        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 text-xs text-slate-700">
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 text-xs text-slate-700">
           <div class="flex justify-between items-center">
             <span class="text-slate-500 font-medium">Shift ID:</span>
-            <span class="font-bold text-sky-700">{$shiftStore.shiftId}</span>
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <span class="font-bold text-sky-800 font-mono px-2.5 py-1 bg-sky-100/80 border border-sky-200 rounded-xl shadow-xs">{$shiftStore.shiftId}</span>
+            </div>
           </div>
           <div class="flex justify-between items-center border-t border-slate-200 pt-2">
             <span class="text-slate-500 font-medium">Kas Awal Laci:</span>

@@ -53,7 +53,7 @@ export const stockAdjustmentRoutes = new Elysia({ prefix: '/stock-adjustments' }
       ? body.reason.toUpperCase()
       : 'DAMAGED';
 
-    const dbUsers = await db.select({ id: users.id }).from(users).catch(() => []);
+    const dbUsers = await db.select({ id: users.id, role: users.role, name: users.name }).from(users).catch(() => []);
     const adminUser = dbUsers.find(u => u.role === 'admin') || dbUsers[0];
     const userId = adminUser?.id || 'user-admin-1';
 

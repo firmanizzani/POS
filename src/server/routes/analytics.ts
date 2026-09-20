@@ -139,11 +139,18 @@ async function getDashboardData(dateFrom: Date | null, dateTo: Date | null) {
 }
 
 async function getRevenueData(dateFrom: Date, dateTo: Date, period: string) {
+  const isDaily = period === 'daily';
+  const timeSlots = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
+  
   const dayLabels: string[] = [];
-  const current = new Date(dateFrom);
-  while (current <= dateTo) {
-    dayLabels.push(current.toISOString().slice(0, 10));
-    current.setDate(current.getDate() + 1);
+  if (isDaily) {
+    dayLabels.push(...timeSlots);
+  } else {
+    const current = new Date(dateFrom);
+    while (current <= dateTo) {
+      dayLabels.push(current.toISOString().slice(0, 10));
+      current.setDate(current.getDate() + 1);
+    }
   }
 
   try {
@@ -160,9 +167,9 @@ async function getRevenueData(dateFrom: Date, dateTo: Date, period: string) {
     const prodCostMap = new Map(dbProds.map(p => [p.id, Number(p.costPrice || 0)]));
     const prodNameCostMap = new Map(dbProds.map(p => [p.name, Number(p.costPrice || 0)]));
 
-    const byDay = new Map<string, { omset: number; profit: number; count: number }>();
+    const byLabel = new Map<string, { omset: number; profit: number; count: number }>();
     for (const label of dayLabels) {
-      byDay.set(label, { omset: 0, profit: 0, count: 0 });
+      byLabel.set(label, { omset: 0, profit: 0, count: 0 });
     }
 
     let totalOmset = 0;
@@ -170,7 +177,21 @@ async function getRevenueData(dateFrom: Date, dateTo: Date, period: string) {
     let totalTransactions = 0;
 
     for (const t of allTrx) {
-      const dayKey = new Date(t.createdAt).toISOString().slice(0, 10);
+      let key = '';
+      if (isDaily) {
+        const hour = new Date(t.createdAt).getHours();
+        if (hour <= 8) key = '08:00';
+        else if (hour <= 10) key = '10:00';
+        else if (hour <= 12) key = '12:00';
+        else if (hour <= 14) key = '14:00';
+        else if (hour <= 16) key = '16:00';
+        else if (hour <= 18) key = '18:00';
+        else if (hour <= 20) key = '20:00';
+        else key = '22:00';
+      } else {
+        key = new Date(t.createdAt).toISOString().slice(0, 10);
+      }
+
       const omset = Number(t.grandTotal || 0);
       const items = itemMap.get(t.id) || [];
       const cost = items.reduce((acc: number, i: any) => {
@@ -182,11 +203,11 @@ async function getRevenueData(dateFrom: Date, dateTo: Date, period: string) {
       }, 0);
       const profit = omset - cost;
 
-      const day = byDay.get(dayKey) || { omset: 0, profit: 0, count: 0 };
-      day.omset += omset;
-      day.profit += profit;
-      day.count += 1;
-      byDay.set(dayKey, day);
+      const slot = byLabel.get(key) || { omset: 0, profit: 0, count: 0 };
+      slot.omset += omset;
+      slot.profit += profit;
+      slot.count += 1;
+      byLabel.set(key, slot);
 
       totalOmset += omset;
       totalCost += cost;
@@ -196,7 +217,7 @@ async function getRevenueData(dateFrom: Date, dateTo: Date, period: string) {
     const netProfit = totalOmset - totalCost;
     const averageOrderValue = totalTransactions > 0 ? Math.round(totalOmset / totalTransactions) : 0;
 
-    const chartData = Array.from(byDay.entries()).map(([date, v]) => ({
+    const chartData = Array.from(byLabel.entries()).map(([date, v]) => ({
       date,
       omset: v.omset,
       profit: v.profit,
