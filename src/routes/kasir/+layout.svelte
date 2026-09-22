@@ -1,30 +1,12 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { authStore } from '$lib/stores/authStore';
   import { shiftStore } from '$lib/stores/posStore';
-  import { Store, ShoppingCart, LogOut, Clock, User } from 'lucide-svelte';
-
-  // Jam WIB real-time
-  let currentTimeWIB = '';
-
-  function updateClock() {
-    currentTimeWIB = new Date().toLocaleTimeString('id-ID', {
-      timeZone: 'Asia/Jakarta',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-  }
-
-  let clockInterval: ReturnType<typeof setInterval>;
+  import { ShoppingCart, LogOut, User } from 'lucide-svelte';
 
   onMount(() => {
-    updateClock();
-    clockInterval = setInterval(updateClock, 1000);
-
     const unsubscribe = authStore.subscribe((user) => {
       if (!user) {
         goto('/login');
@@ -33,10 +15,6 @@
       }
     });
     return unsubscribe;
-  });
-
-  onDestroy(() => {
-    clearInterval(clockInterval);
   });
 
   function logout() {
@@ -55,15 +33,6 @@
       <div>
         <h1 class="text-base font-black text-slate-900 tracking-wide">KASIR POS</h1>
         <p class="text-[11px] text-sky-600 font-semibold">VecMart</p>
-      </div>
-    </div>
-
-    <!-- Jam WIB Real-Time -->
-    <div class="flex items-center space-x-2 bg-slate-900 text-white rounded-xl px-4 py-2 shadow-md">
-      <Clock class="w-4 h-4 text-sky-400 shrink-0" />
-      <div class="text-center">
-        <p class="text-sm font-black font-mono tracking-widest leading-none">{currentTimeWIB}</p>
-        <p class="text-[9px] text-slate-400 font-semibold mt-0.5 uppercase tracking-wider">WIB · Indonesia</p>
       </div>
     </div>
 

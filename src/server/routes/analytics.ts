@@ -13,31 +13,54 @@ export const analyticsRoutes = new Elysia({ prefix: '/analytics' })
     return await getDashboardData(dateFrom, dateTo);
   })
   .get('/revenue', async ({ query }: { query: any }) => {
-    const now = new Date();
-    let dateFrom: Date;
-    let dateTo: Date = new Date(now);
-    dateTo.setHours(23, 59, 59, 999);
-
     const period = query?.period || 'daily';
 
+    // Semua kalkulasi waktu menggunakan WIB (UTC+7)
+    const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+    const nowUTC = new Date();
+    // "Sekarang" dalam perspektif WIB
+    const nowWIB = new Date(nowUTC.getTime() + WIB_OFFSET_MS);
+
+    let dateFrom: Date;
+    let dateTo: Date;
+
     if (period === 'daily') {
-      dateFrom = new Date(now);
-      dateFrom.setHours(0, 0, 0, 0);
+      // Tengah malam WIB hari ini = midnight WIB → konversi ke UTC
+      const midnightWIB = new Date(Date.UTC(
+        nowWIB.getUTCFullYear(),
+        nowWIB.getUTCMonth(),
+        nowWIB.getUTCDate(),
+        0, 0, 0, 0
+      ) - WIB_OFFSET_MS);
+      const endOfDayWIB = new Date(midnightWIB.getTime() + 24 * 60 * 60 * 1000 - 1);
+      dateFrom = midnightWIB;
+      dateTo = endOfDayWIB;
     } else if (period === 'weekly') {
+      const now = new Date(nowUTC);
       dateFrom = new Date(now);
       dateFrom.setDate(now.getDate() - 6);
       dateFrom.setHours(0, 0, 0, 0);
+      dateTo = new Date(now);
+      dateTo.setHours(23, 59, 59, 999);
     } else if (period === 'monthly') {
+      const now = new Date(nowUTC);
       dateFrom = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      dateTo = new Date(now);
+      dateTo.setHours(23, 59, 59, 999);
     } else if (period === 'yearly') {
+      const now = new Date(nowUTC);
       dateFrom = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      dateTo = new Date(now);
+      dateTo.setHours(23, 59, 59, 999);
     } else {
-      dateFrom = query?.dateFrom ? new Date(query.dateFrom + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
-      dateTo = query?.dateTo ? new Date(query.dateTo + 'T23:59:59') : new Date(dateTo);
+      dateFrom = query?.dateFrom ? new Date(query.dateFrom + 'T00:00:00') : new Date(nowUTC.getFullYear(), nowUTC.getMonth(), 1);
+      dateTo = query?.dateTo ? new Date(query.dateTo + 'T23:59:59') : new Date(nowUTC);
+      dateTo.setHours(23, 59, 59, 999);
     }
 
     return await getRevenueData(dateFrom, dateTo, period);
   });
+
 
 async function getDashboardData(dateFrom: Date | null, dateTo: Date | null) {
   try {
@@ -179,14 +202,15 @@ async function getRevenueData(dateFrom: Date, dateTo: Date, period: string) {
     for (const t of allTrx) {
       let key = '';
       if (isDaily) {
-        const hour = new Date(t.createdAt).getHours();
-        if (hour <= 8) key = '08:00';
-        else if (hour <= 10) key = '10:00';
-        else if (hour <= 12) key = '12:00';
-        else if (hour <= 14) key = '14:00';
-        else if (hour <= 16) key = '16:00';
-        else if (hour <= 18) key = '18:00';
-        else if (hour <= 20) key = '20:00';
+        // Gunakan jam WIB (UTC+7) bukan jam UTC server
+        const hourWIB = (new Date(t.createdAt).getUTCHours() + 7) % 24;
+        if (hourWIB <= 8) key = '08:00';
+        else if (hourWIB <= 10) key = '10:00';
+        else if (hourWIB <= 12) key = '12:00';
+        else if (hourWIB <= 14) key = '14:00';
+        else if (hourWIB <= 16) key = '16:00';
+        else if (hourWIB <= 18) key = '18:00';
+        else if (hourWIB <= 20) key = '20:00';
         else key = '22:00';
       } else {
         key = new Date(t.createdAt).toISOString().slice(0, 10);

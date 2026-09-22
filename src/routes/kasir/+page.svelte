@@ -735,18 +735,27 @@
           <!-- Product Image Container -->
           <div class="w-full h-28 bg-slate-100 rounded-xl overflow-hidden relative mb-2.5 flex items-center justify-center border border-slate-100 group-hover:border-sky-100 transition-colors">
             {#if p.imageUrl}
-              <img src={p.imageUrl} alt={p.name} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <!-- Emoji as instant fallback, image overlays it once loaded -->
+              <span class="absolute text-4xl select-none pointer-events-none">{p.image || '📦'}</span>
+              <img
+                src={p.imageUrl}
+                alt={p.name}
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+                class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
             {:else}
               <span class="text-4xl group-hover:scale-110 transition-transform duration-300">{p.image || '📦'}</span>
             {/if}
 
             <!-- Overlay Badge: Category -->
-            <span class="absolute top-1.5 right-1.5 bg-white/95 backdrop-blur-sm text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-200 shadow-sm">
+            <span class="absolute top-1.5 right-1.5 bg-white/95 backdrop-blur-sm text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded-full border border-slate-200 shadow-sm z-10">
               {p.category}
             </span>
 
             <!-- Overlay Badge: Stock -->
-            <span class="absolute bottom-1.5 left-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm {p.stock <= 5 ? 'bg-red-500 text-white' : 'bg-slate-900/80 text-white'}">
+            <span class="absolute bottom-1.5 left-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10 {p.stock <= 5 ? 'bg-red-500 text-white' : 'bg-slate-900/80 text-white'}">
               Stok: {p.stock}
             </span>
           </div>
