@@ -70,8 +70,15 @@ export const transactionRoutes = new Elysia({ prefix: '/transactions' })
     }
   });
 
-function formatDateTime(date: Date) {
-  const d = new Date(date);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function formatDateTime(date: Date | string | null) {
+  if (!date) return '-';
+  return new Date(date).toLocaleString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
 }

@@ -44,6 +44,8 @@
   let showHoldModal = false;
   let showShiftModal = false;
   let showReceiptModal = false;
+  let showSessionRequiredModal = false; // Modal blokir bayar jika sesi belum aktif
+
 
   let paidAmount = 0;
   let paymentMethod = 'CASH';
@@ -660,7 +662,8 @@
       paidAmount: paidAmount,
       changeAmount: changeAmount,
       paymentMethod: paymentMethod,
-      timestamp: new Date().toLocaleString('id-ID')
+      timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+
     };
 
     showPaymentModal = false;
@@ -935,6 +938,10 @@
         <button
           disabled={$cartItems.length === 0}
           on:click={() => {
+            if (!$shiftStore.isClockedIn) {
+              showSessionRequiredModal = true;
+              return;
+            }
             paidAmount = $grandTotal;
             showPaymentModal = true;
           }}
@@ -943,6 +950,7 @@
           <CreditCard class="w-4 h-4" />
           <span>BAYAR (F8)</span>
         </button>
+
       </div>
     </div>
   </div>
@@ -1374,6 +1382,64 @@
       <button on:click={registerQuickMember} disabled={isRegisteringMember} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-sky-600/20">
         {isRegisteringMember ? 'MENDAFTARKAN...' : 'DAFTARKAN & PILIH MEMBER'}
       </button>
+    </div>
+  </div>
+{/if}
+
+<!-- MODAL 6: SESI BELUM AKTIF — Blokir Pembayaran -->
+{#if showSessionRequiredModal}
+  <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-6 space-y-5 shadow-2xl text-center">
+      
+      <!-- Icon & Judul -->
+      <div class="flex flex-col items-center space-y-3">
+        <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center border-4 border-amber-200">
+          <Clock class="w-8 h-8 text-amber-600" />
+        </div>
+        <div>
+          <h3 class="text-lg font-black text-slate-900">Sesi Belum Aktif!</h3>
+          <p class="text-xs text-slate-500 mt-1">Kasir tidak dapat memproses pembayaran sebelum mengaktifkan sesi shift.</p>
+        </div>
+      </div>
+
+      <!-- Info Box -->
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left space-y-2">
+        <p class="text-xs font-bold text-amber-800 flex items-center space-x-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+          <span>Kenapa perlu aktifkan sesi?</span>
+        </p>
+        <ul class="text-[11px] text-amber-700 space-y-1 ml-3.5 list-disc">
+          <li>Setiap transaksi harus terikat ke shift kasir yang aktif</li>
+          <li>Untuk keperluan audit & laporan keuangan harian</li>
+          <li>Pastikan kas awal laci sudah disiapkan sebelum mulai</li>
+        </ul>
+      </div>
+
+      <!-- Tombol Aksi -->
+      <div class="space-y-2">
+        <button
+          on:click={() => {
+            showSessionRequiredModal = false;
+            showShiftModal = true;
+            fetchLastCloseoutCash();
+          }}
+          class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center space-x-2"
+        >
+          <PlayCircle class="w-5 h-5" />
+          <span>AKTIFKAN SESI SEKARANG</span>
+        </button>
+
+        <button
+          on:click={() => (showSessionRequiredModal = false)}
+          class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-sm border border-slate-200 transition-all"
+        >
+          Batal
+        </button>
+      </div>
+
+      <p class="text-[10px] text-slate-400">
+        Hubungi supervisor jika ada kendala dalam memulai sesi
+      </p>
     </div>
   </div>
 {/if}

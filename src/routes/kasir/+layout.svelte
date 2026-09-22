@@ -1,11 +1,30 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { authStore } from '$lib/stores/authStore';
+  import { shiftStore } from '$lib/stores/posStore';
   import { Store, ShoppingCart, LogOut, Clock, User } from 'lucide-svelte';
 
+  // Jam WIB real-time
+  let currentTimeWIB = '';
+
+  function updateClock() {
+    currentTimeWIB = new Date().toLocaleTimeString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  }
+
+  let clockInterval: ReturnType<typeof setInterval>;
+
   onMount(() => {
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
+
     const unsubscribe = authStore.subscribe((user) => {
       if (!user) {
         goto('/login');
@@ -14,6 +33,10 @@
       }
     });
     return unsubscribe;
+  });
+
+  onDestroy(() => {
+    clearInterval(clockInterval);
   });
 
   function logout() {
@@ -35,6 +58,15 @@
       </div>
     </div>
 
+    <!-- Jam WIB Real-Time -->
+    <div class="flex items-center space-x-2 bg-slate-900 text-white rounded-xl px-4 py-2 shadow-md">
+      <Clock class="w-4 h-4 text-sky-400 shrink-0" />
+      <div class="text-center">
+        <p class="text-sm font-black font-mono tracking-widest leading-none">{currentTimeWIB}</p>
+        <p class="text-[9px] text-slate-400 font-semibold mt-0.5 uppercase tracking-wider">WIB · Indonesia</p>
+      </div>
+    </div>
+
     <!-- Session Info + Logout -->
     <div class="flex items-center space-x-4">
       {#if $authStore}
@@ -45,8 +77,13 @@
           <div class="text-right">
             <p class="text-xs font-bold text-slate-900">{$authStore.name}</p>
             <div class="flex items-center space-x-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span class="text-[10px] text-emerald-600 font-semibold capitalize">Shift Aktif</span>
+              {#if $shiftStore.isClockedIn}
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-[10px] text-emerald-600 font-semibold">Sesi Aktif</span>
+              {:else}
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span class="text-[10px] text-amber-600 font-semibold">Sesi Belum Dimulai</span>
+              {/if}
             </div>
           </div>
         </div>

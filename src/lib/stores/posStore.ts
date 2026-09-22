@@ -131,7 +131,7 @@ export const holdCurrentCart = (label: string) => {
       {
         id: `hold-${Date.now()}`,
         label: label || `Hold #${held.length + 1}`,
-        timestamp: new Date().toLocaleTimeString('id-ID'),
+        timestamp: new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' }),
         items: [...items],
         member: null
       }

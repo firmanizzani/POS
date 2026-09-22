@@ -328,8 +328,9 @@
             <tr class="hover:bg-slate-50">
               <td class="p-3 font-mono font-bold text-sky-700">{s.id}</td>
               <td class="p-3 font-bold text-slate-900">{s.cashierName}</td>
-              <td class="p-3 text-slate-500 font-mono text-[11px]">{new Date(s.clockIn).toLocaleString('id-ID')}</td>
-              <td class="p-3 text-slate-500 font-mono text-[11px]">{s.clockOut ? new Date(s.clockOut).toLocaleString('id-ID') : (s.status === 'closed' ? 'Selesai' : 'Shift Aktif')}</td>
+              <td class="p-3 text-slate-500 font-mono text-[11px]">{new Date(s.clockIn).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</td>
+              <td class="p-3 text-slate-500 font-mono text-[11px]">{s.clockOut ? new Date(s.clockOut).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : (s.status === 'closed' ? 'Selesai' : 'Shift Aktif')}</td>
+
               <td class="p-3 text-right font-mono">{formatRp(s.startingCash || 0)}</td>
               <td class="p-3 text-right font-mono text-emerald-700 font-semibold">{formatRp(s.salesCash || 0)}</td>
               <td class="p-3 text-right font-mono font-bold text-slate-900">{formatRp(s.expectedCash || 0)}</td>
